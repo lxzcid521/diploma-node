@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <title>UrBank - Реєстрація</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <div class="container">
+    <h2 class="title">Реєстрація</h2>
+
+    <form id="registerForm">
+    <input type="text" id="full_name" placeholder="ПІБ" required>
+    <input type="email" id="email" placeholder="Електронна пошта" required>
+    <input type="password" id="password" placeholder="Пароль" required>
+    <input type="password" id="confirm" placeholder="Повторіть пароль" required>
+    <input type="tel" id="phone" placeholder="Телефон">
+
+      <button class="btn" type="submit">Створити акаунт</button>
+    </form>
+
+    <a class="link" href="index.html">Вже маєте акаунт?</a>
+  </div>
+
+  <script src="script/register.js"></script>
+
+</body>
+</html>

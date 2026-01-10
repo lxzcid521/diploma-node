@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <title>UrBank Dashboard</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="top-bar">
+  <button class="profile-btn">👤</button>
+  <div class="top-title">UrBank</div>
+</header>
+
+<div class="page">
+
+<div class="container">
+
+  <h2 class="title">
+    Вітаємо, <span id="welcomeText"></span> 👋
+  </h2>
+
+  <div class="card">
+    <div class="card-header">
+      <span class="card-name">UrBank Card</span>
+      <span class="card-dots">•••</span>
+    </div>
+
+    <div class="card-body">
+      <div id="cardNumber"></div>
+
+      <div class="card-info">
+        <div>
+          <small>Власник</small><br>
+          <span id="cardHolder"></span>
+        </div>
+
+        <div>
+          <small>Термін</small><br>
+          <span id="cardExpiry"></span>
+        </div>
+      </div>
+
+      <div class="card-balance">
+        <small>Баланс</small><br>
+        <span id="cardBalance"></span> ₴
+      </div>
+    </div>
+  </div>
+
+</div> 
+
+<div class="actions-panel">
+  <div class="actions">
+
+    <div class="action-btn">
+      <div class="icon">💳</div>
+      <span>Переказати</span>
+    </div>
+
+    <div class="action-btn">
+      <div class="icon">📱</div>
+      <span>Мобільний</span>
+    </div>
+
+    <div class="action-btn">
+      <div class="icon">₴</div>
+      <span>Платежі</span>
+    </div>
+
+  </div>
+</div>
+<div class="transactions">
+  <div class="transactions-title">Історія операцій</div>
+  <ul id="transactionsList"></ul>
+</div>
+
+<script src="script/dashboard.js"></script>
+</body>
+</html>
