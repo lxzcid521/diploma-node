@@ -242,7 +242,17 @@ app.post("/api/transfer", authMiddleware, (req, res) => {
         if (err || !fromCards.length)
           return db.rollback(() => res.status(400).json({ error: "Карта не знайдена" }));
 
-        const fromCard = fromCards[0];
+
+        const toCard = toCards[0];
+        if (fromCard.id === toCard.id) {
+      return db.rollback(() =>
+        res.status(400).json({
+          error: "Неможливо переказати кошти на ту ж картку"
+        })
+      );
+    }
+
+
 
         if (fromCard.balance < amount)
           return db.rollback(() => res.status(400).json({ error: "Недостатньо коштів" }));

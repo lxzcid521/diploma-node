@@ -13,7 +13,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       document.getElementById("fromCardNumber").innerText =
         maskCard(data.card_number);
       document.getElementById("fromCardBalance").innerText =
-        `Баланс: ${data.balance} ₴`;
+        `Баланс: ${Number(data.balance).toFixed(2)} ₴`;
     }
   } catch (e) {
     console.error(e);
@@ -27,12 +27,12 @@ function maskCard(card) {
 document.getElementById("transferForm").addEventListener("submit", async e => {
   e.preventDefault();
 
-  const toCard = document.getElementById("toCard").value.trim();
+  const toCardNumber = document.getElementById("toCard").value.trim();
   const amount = Number(document.getElementById("amount").value);
-  const comment = document.getElementById("comment").value.trim();
+  const description = document.getElementById("comment").value.trim();
 
-  if (amount <= 0) {
-    alert("Некоректна сума");
+   if (!toCardNumber || amount <= 0) {
+    alert("Некоректні дані");
     return;
   }
 
@@ -40,13 +40,13 @@ document.getElementById("transferForm").addEventListener("submit", async e => {
     const res = await authFetch("/api/transfer", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ toCard, amount, comment })
+      body: JSON.stringify({ toCardNumber, amount, description })
     });
 
     const data = await res.json();
 
     if (res.ok) {
-      alert("Переказ успішний ✅");
+      alert("Переказ успішний!");
       window.location.href = "/dashboard.html";
     } else {
       alert(data.error || "Помилка переказу");
