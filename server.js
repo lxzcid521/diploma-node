@@ -221,6 +221,80 @@ function authMiddleware(req, res, next) {
   });
 }
 
+/** Апи для для записи в транзакции история обновляеться*/
+
+app.post("/api/transfer", authMiddleware, (req, res) => {
+  const fromUserId = req.user.id;
+  const { toCardNumber, amount, description } = req.body;
+
+  if (!toCardNumber || amount <= 0) {
+    return res.status(400).json({ error: "Невірні дані" });
+  }
+
+  db.beginTransaction(err => {
+    if (err) return res.status(500).json({ error: err });
+
+    // 1️⃣ Получаем карту отправителя
+    db.query(
+      "SELECT * FROM cards WHERE user_id = ? FOR UPDATE",
+      [fromUserId],
+      (err, fromCards) => {
+        if (err || !fromCards.length)
+          return db.rollback(() => res.status(400).json({ error: "Карта не знайдена" }));
+
+        const fromCard = fromCards[0];
+
+        if (fromCard.balance < amount)
+          return db.rollback(() => res.status(400).json({ error: "Недостатньо коштів" }));
+
+        // 2️⃣ Получаем карту получателя
+        db.query(
+          "SELECT * FROM cards WHERE card_number = ? FOR UPDATE",
+          [toCardNumber],
+          (err, toCards) => {
+            if (err || !toCards.length)
+              return db.rollback(() => res.status(400).json({ error: "Карта отримувача не знайдена" }));
+
+            const toCard = toCards[0];
+
+            // 3️⃣ Списание
+            db.query(
+              "UPDATE cards SET balance = balance - ? WHERE id = ?",
+              [amount, fromCard.id]
+            );
+
+            // 4️⃣ Начисление
+            db.query(
+              "UPDATE cards SET balance = balance + ? WHERE id = ?",
+              [amount, toCard.id]
+            );
+
+            // 5️⃣ История отправителя
+            db.query(
+              "INSERT INTO transactions (user_id, type, amount, description) VALUES (?, 'expense', ?, ?)",
+              [fromUserId, amount, description || "Переказ"]
+            );
+
+            // 6️⃣ История получателя
+            db.query(
+              "INSERT INTO transactions (user_id, type, amount, description) VALUES (?, 'income', ?, ?)",
+              [toCard.user_id, amount, description || "Отримання коштів"]
+            );
+
+            // 7️⃣ Коммит
+            db.commit(err => {
+              if (err) return db.rollback(() => res.status(500).json({ error: err }));
+              res.json({ message: "Переказ успішний" });
+            });
+          }
+        );
+      }
+    );
+  });
+});
+
+
+
 /** Апи написал где я буду создавать карточку автоматически 
 app.post("/api/register", async (req, res) => {
   const { full_name, email, password, phone } = req.body;

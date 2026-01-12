@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <title>UrBank — Переказ коштів</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="top-bar">
+  <button onclick="goBack()">←</button>
+  <div class="top-title">Переказ коштів</div>
+</header>
+
+<div class="container">
+
+  <div class="card transfer-card">
+    <small>З картки</small>
+    <div id="fromCardNumber">•••• •••• •••• ••••</div>
+    <div id="fromCardBalance">Баланс: 0 ₴</div>
+  </div>
+
+  <form id="transferForm">
+
+    <input
+      type="text"
+      id="toCard"
+      placeholder="Номер картки отримувача"
+      required
+    />
+
+    <input
+      type="number"
+      id="amount"
+      placeholder="Сума ₴"
+      min="1"
+      required
+    />
+
+    <input
+      type="text"
+      id="comment"
+      placeholder="Коментар (необовʼязково)"
+    />
+
+    <button class="btn" type="submit">Переказати</button>
+
+  </form>
+
+</div>
+
+<script src="script/transfer.js"></script>
+</body>
+</html>

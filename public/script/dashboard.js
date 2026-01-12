@@ -135,3 +135,11 @@ function logoutUser() {
 
 resetTimer();
 
+const transferBtn = document.getElementById("transferBtn");
+
+if (transferBtn) {
+  transferBtn.addEventListener("click", () => {
+    window.location.href = "/transfer.html";
+  });
+}
+
