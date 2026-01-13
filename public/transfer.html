@@ -8,46 +8,30 @@
 <body>
 
 <header class="top-bar">
-  <button onclick="goBack()">←</button>
+  <button class="back-btn" onclick="goBack()">←</button>
   <div class="top-title">Переказ коштів</div>
 </header>
 
-<div class="container">
+<main class="container">
 
   <div class="card transfer-card">
-    <small>З картки</small>
-    <div id="fromCardNumber">•••• •••• •••• ••••</div>
-    <div id="fromCardBalance">Баланс: 0 ₴</div>
+    <small class="label">З картки</small>
+    <div id="fromCardNumber" class="card-number">•••• •••• •••• ••••</div>
+    <div id="fromCardBalance" class="card-balance">Баланс: 0 ₴</div>
   </div>
 
-  <form id="transferForm">
+  <form id="transferForm" class="transfer-form">
 
-    <input
-      type="text"
-      id="toCard"
-      placeholder="Номер картки отримувача"
-      required
-    />
-
-    <input
-      type="number"
-      id="amount"
-      placeholder="Сума ₴"
-      min="1"
-      required
-    />
-
-    <input
-      type="text"
-      id="comment"
-      placeholder="Коментар (необовʼязково)"
-    />
+    <input type="text" id="toCard" placeholder="Номер картки отримувача" required />
+    <input type="number" id="amount" placeholder="Сума ₴" min="1" required />
+    <input type="text" id="comment" placeholder="Коментар (необовʼязково)" />
 
     <button class="btn" type="submit">Переказати</button>
 
   </form>
 
-</div>
+</main>
+
 <script src="script/auth.js"></script>
 <script src="script/transfer.js"></script>
 </body>

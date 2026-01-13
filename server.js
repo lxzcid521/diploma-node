@@ -227,81 +227,141 @@ app.post("/api/transfer", authMiddleware, (req, res) => {
   const fromUserId = req.user.id;
   const { toCardNumber, amount, description } = req.body;
 
-  if (!toCardNumber || amount <= 0) {
+  const sum = Number(amount);
+
+  if (!toCardNumber || !Number.isFinite(sum) || sum <= 0) {
     return res.status(400).json({ error: "Невірні дані" });
   }
 
   db.beginTransaction(err => {
-    if (err) return res.status(500).json({ error: err });
+    if (err) {
+      console.error("BEGIN ERROR:", err);
+      return res.status(500).json({ error: "Помилка транзакції" });
+    }
 
-    // 1️⃣ Получаем карту отправителя
+    // Карта отправителя
     db.query(
       "SELECT * FROM cards WHERE user_id = ? FOR UPDATE",
       [fromUserId],
       (err, fromCards) => {
-        if (err || !fromCards.length)
-          return db.rollback(() => res.status(400).json({ error: "Карта не знайдена" }));
+        if (err || !fromCards.length) {
+          console.error("FROM CARD ERROR:", err);
+          return db.rollback(() =>
+            res.status(400).json({ error: "Карта відправника не знайдена" })
+          );
+        }
 
+        const fromCard = fromCards[0];
 
-        const toCard = toCards[0];
-        if (fromCard.id === toCard.id) {
-      return db.rollback(() =>
-        res.status(400).json({
-          error: "Неможливо переказати кошти на ту ж картку"
-        })
-      );
-    }
-
-
-
-        if (fromCard.balance < amount)
-          return db.rollback(() => res.status(400).json({ error: "Недостатньо коштів" }));
-
-        // 2️⃣ Получаем карту получателя
+        // Карта получателя
         db.query(
           "SELECT * FROM cards WHERE card_number = ? FOR UPDATE",
           [toCardNumber],
           (err, toCards) => {
-            if (err || !toCards.length)
-              return db.rollback(() => res.status(400).json({ error: "Карта отримувача не знайдена" }));
+            if (err || !toCards.length) {
+              console.error("TO CARD ERROR:", err);
+              return db.rollback(() =>
+                res.status(400).json({ error: "Карта отримувача не знайдена" })
+              );
+            }
 
             const toCard = toCards[0];
 
-            // 3️⃣ Списание
+            // Запрет перевода на ту же карту
+            if (fromCard.id === toCard.id) {
+              return db.rollback(() =>
+                res.status(400).json({
+                  error: "Неможливо переказати кошти на ту ж картку"
+                })
+              );
+            }
+
+            // Проверка баланса
+            if (Number(fromCard.balance) < sum) {
+              return db.rollback(() =>
+                res.status(400).json({ error: "Недостатньо коштів" })
+              );
+            }
+
+            // Cписание
             db.query(
               "UPDATE cards SET balance = balance - ? WHERE id = ?",
-              [amount, fromCard.id]
-            );
+              [sum, fromCard.id],
+              err => {
+                if (err) {
+                  console.error("DEBIT ERROR:", err);
+                  return db.rollback(() =>
+                    res.status(500).json({ error: "Помилка списання" })
+                  );
+                }
 
-            // 4️⃣ Начисление
-            db.query(
-              "UPDATE cards SET balance = balance + ? WHERE id = ?",
-              [amount, toCard.id]
-            );
+                // Начисление
+                db.query(
+                  "UPDATE cards SET balance = balance + ? WHERE id = ?",
+                  [sum, toCard.id],
+                  err => {
+                    if (err) {
+                      console.error("CREDIT ERROR:", err);
+                      return db.rollback(() =>
+                        res.status(500).json({ error: "Помилка зарахування" })
+                      );
+                    }
 
-            // 5️⃣ История отправителя
-            db.query(
-              "INSERT INTO transactions (user_id, type, amount, description) VALUES (?, 'expense', ?, ?)",
-              [fromUserId, amount, description || "Переказ"]
-            );
+                    //  История отправителя
+                    db.query(
+                    `INSERT INTO transactions (user_id, card_id, type, amount, description)
+                     VALUES (?, ?, 'expense', ?, ?)`,
+                     [fromUserId, fromCard.id, sum, description || "Переказ"],
+                     err => {
+                       if (err) {
+                          console.error("TX EXPENSE ERROR:", err);
+                          return db.rollback(() =>
+                          res.status(500).json({ error: "Помилка історії" })
+                          );
+                       }
 
-            // 6️⃣ История получателя
-            db.query(
-              "INSERT INTO transactions (user_id, type, amount, description) VALUES (?, 'income', ?, ?)",
-              [toCard.user_id, amount, description || "Отримання коштів"]
-            );
+                    
 
-            // 7️⃣ Коммит
-            db.commit(err => {
-              if (err) return db.rollback(() => res.status(500).json({ error: err }));
-              res.json({ message: "Переказ успішний" });
-            });
+                        // История получателя
+                        db.query(
+                        `INSERT INTO transactions (user_id, card_id, type, amount, description)
+                         VALUES (?, ?, 'income', ?, ?)`,
+                         [toCard.user_id, toCard.id, sum, description || "Отримання коштів"],
+                         err => {
+                         if (err) {
+                         console.error("TX INCOME ERROR:", err);
+                         return db.rollback(() =>
+                          res.status(500).json({ error: err.message })
+                         );
+                        }
+
+
+                            //  Commit
+                            db.commit(err => {
+                              if (err) {
+                                console.error("COMMIT ERROR:", err);
+                                return db.rollback(() =>
+                                  res.status(500).json({ error: "Commit error" })
+                                );
+                              }
+
+                              res.json({ message: "Переказ успішний" });
+                            });
+                          }
+                        );
+                      }
+                    );
+                  }
+                );
+              }
+            );
           }
         );
       }
     );
   });
 });
+
 
 
 
