@@ -1,3 +1,5 @@
+let myCardNumber = null;
+
 document.addEventListener("DOMContentLoaded", async () => {
   const user = JSON.parse(localStorage.getItem("user"));
   if (!user) {
@@ -10,6 +12,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const data = await res.json();
 
     if (res.ok) {
+      myCardNumber = String(data.card_number);
       document.getElementById("fromCardNumber").innerText =
         maskCard(data.card_number);
       document.getElementById("fromCardBalance").innerText =
@@ -18,6 +21,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   } catch (e) {
     console.error(e);
   }
+  renderSavedCards();
 });
 
 function maskCard(card) {
@@ -46,6 +50,7 @@ document.getElementById("transferForm").addEventListener("submit", async e => {
     const data = await res.json();
 
     if (res.ok) {
+      saveCard(toCardNumber);
       alert("Переказ успішний!");
       window.location.href = "/dashboard.html";
     } else {
@@ -60,3 +65,53 @@ document.getElementById("transferForm").addEventListener("submit", async e => {
 function goBack() {
   window.location.href = "/dashboard.html";
 }
+
+
+function getSavedCards() {
+  return JSON.parse(localStorage.getItem("savedCards")) || [];
+}
+
+function renderSavedCards() {
+  const list = document.getElementById("savedCardsList");
+  if (!list) return;
+
+  const cards = getSavedCards();
+  list.innerHTML = "";
+
+  cards.forEach(card => {
+    const el = document.createElement("div");
+    el.className = "saved-card";
+    el.textContent = "•••• •••• •••• " + card.cardNumber.slice(-4);
+
+    el.onclick = () => {
+      const input = document.getElementById("toCard");
+      input.value = card.cardNumber;
+      input.focus();
+    };
+
+    list.appendChild(el);
+  });
+}
+
+
+function saveCard(cardNumber) {
+  if (String(cardNumber) === String(myCardNumber)) {
+    return; /** не сохраняем свою карту */
+  }
+
+  let cards = getSavedCards();
+
+  cards = cards.filter(c => String(c.cardNumber) !== String(cardNumber));
+
+  cards.unshift({
+    cardNumber: String(cardNumber),
+    lastUsed: new Date().toISOString()
+  });
+
+  cards = cards.slice(0, 5);
+
+  localStorage.setItem("savedCards", JSON.stringify(cards));
+}
+
+
+

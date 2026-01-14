@@ -16,21 +16,24 @@
 
   <div class="card transfer-card">
     <small class="label">З картки</small>
-    <div id="fromCardNumber" class="card-number">•••• •••• •••• ••••</div>
-    <div id="fromCardBalance" class="card-balance">Баланс: 0 ₴</div>
+    <div id="fromCardNumber" class="card-number"></div>
+    <div id="fromCardBalance" class="card-balance">Баланс: ₴</div>
   </div>
 
   <form id="transferForm" class="transfer-form">
-
     <input type="text" id="toCard" placeholder="Номер картки отримувача" required />
     <input type="number" id="amount" placeholder="Сума ₴" min="1" required />
     <input type="text" id="comment" placeholder="Коментар (необовʼязково)" />
-
     <button class="btn" type="submit">Переказати</button>
-
   </form>
 
+  <div class="saved-cards">
+    <div class="saved-title">Останні картки</div>
+    <div id="savedCardsList"></div>
+  </div>
+
 </main>
+
 
 <script src="script/auth.js"></script>
 <script src="script/transfer.js"></script>

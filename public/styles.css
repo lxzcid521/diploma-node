@@ -3,17 +3,28 @@ body {
   min-height: 100vh;
   font-family: "Arial", sans-serif;
   background: #B0E0E6;
+
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+.login-page {
+  min-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
 }
 
+
 .page {
+  width:100%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-top: 80px;
+  padding-top: 90px;
 }
+
+
 
 .container {
   background: #008B8B;
@@ -21,7 +32,7 @@ body {
   padding: 20px;
   border-radius: 20px;
   text-align: center;
-  margin-top: -200px;
+  
 }
 
 .title {
@@ -153,6 +164,7 @@ input {
   justify-content: center;
   box-shadow: 0 4px 10px rgba(0,0,0,0.2);
   z-index: 1000;
+  
 }
 
 .top-title {
@@ -178,12 +190,36 @@ input {
 }
 
 .transactions {
-  margin-top: 25px;
-  background: #B0E0E6;
-  border-radius: 16px;
+  margin-top: 30px;
+  background: #E0F7FA;
+  border-radius: 18px;
   padding: 20px;
-  text-align: left;
+  width: 420px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+
+  max-height: 320px;          
+  display: flex;
+  flex-direction: column;
 }
+
+#transactionsList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+
+  overflow-y: auto;          
+  max-height: 260px;          
+}
+
+#transactionsList::-webkit-scrollbar {
+  width: 6px;
+}
+
+#transactionsList::-webkit-scrollbar-thumb {
+  background: #4db6ac;
+  border-radius: 4px;
+}
+
 
 .transactions-title {
   margin-bottom: 15px;
@@ -392,7 +428,7 @@ input {
     transform: translateY(0);
   }
 }
-back-btn {
+.back-btn {
   position: absolute;
   left: 20px;
   background: #87CEFA;
@@ -407,3 +443,30 @@ back-btn {
 .back-btn:hover {
   background: #87CEEB;
 }
+.saved-cards {
+  margin-top: 25px;
+  text-align: left;
+}
+
+.saved-title {
+  font-size: 14px;
+  font-weight: bold;
+  color: #004c4c;
+  margin-bottom: 10px;
+}
+
+.saved-card {
+  background: #E0F7FA;
+  padding: 12px 14px;
+  border-radius: 14px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: 0.2s;
+}
+
+.saved-card:hover {
+  background: #B2EBF2;
+  transform: translateX(4px);
+}
+
