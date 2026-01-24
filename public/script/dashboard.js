@@ -104,3 +104,11 @@ if (transferBtn) {
   });
 }
 
+
+const mobileBtn = document.getElementById("mobileBtn");
+
+if (mobileBtn) {
+  mobileBtn.addEventListener("click", () => {
+    window.location.href = "/mobile.html";
+  });
+}
