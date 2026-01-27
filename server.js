@@ -362,7 +362,100 @@ app.post("/api/transfer", authMiddleware, (req, res) => {
   });
 });
 
+app.post("/api/mobile", authMiddleware, (req, res) => {
+  const { phone, amount, comment } = req.body;
+  const userId = req.user.id;
+  const sum = Number(amount);
 
+  if (!phone || !Number.isFinite(sum) || sum <= 0) {
+    return res.status(400).json({ message: "Некоректні дані" });
+  }
+
+  db.beginTransaction(err => {
+    if (err) return res.status(500).json({ message: "Transaction error" });
+
+    db.query(
+      "SELECT id, balance FROM cards WHERE user_id = ? FOR UPDATE",
+      [userId],
+      (err, cards) => {
+        if (err || !cards.length) {
+          return db.rollback(() =>
+            res.status(404).json({ message: "Картка не знайдена" })
+          );
+        }
+
+        const card = cards[0];
+
+        if (Number(card.balance) < sum) {
+          return db.rollback(() =>
+            res.status(400).json({ message: "Недостатньо коштів" })
+          );
+        }
+
+        // списываем
+        db.query(
+          "UPDATE cards SET balance = balance - ? WHERE id = ?",
+          [sum, card.id],
+          err => {
+            if (err) return db.rollback(() =>
+              res.status(500).json({ message: "Помилка списання" })
+            );
+
+            // общая история
+            db.query(
+              `INSERT INTO transactions (user_id, card_id, type, amount, description)
+               VALUES (?, ?, 'expense', ?, ?)`,
+              [userId, card.id, sum, comment || `Поповнення телефону ${phone}`],
+              err => {
+                if (err) return db.rollback(() =>
+                  res.status(500).json({ message: "Помилка історії" })
+                );
+
+                // mobile table (ТВОЯ ТАБЛИЦА mobile)
+                db.query(
+                  `INSERT INTO mobile (user_id, card_id, phone_number, amount)
+                   VALUES (?, ?, ?, ?)`,
+                  [userId, card.id, phone, sum],
+                  err => {
+                    if (err) return db.rollback(() =>
+                      res.status(500).json({ message: "DB error" })
+                    );
+
+                    db.commit(err => {
+                      if (err) return db.rollback(() =>
+                        res.status(500).json({ message: "Commit error" })
+                      );
+
+                      res.json({ message: "Поповнення успішне" });
+                    });
+                  }
+                );
+              }
+            );
+          }
+        );
+      }
+    );
+  });
+});
+
+app.get("/api/mobile/history", authMiddleware, (req, res) => {
+  const userId = req.user.id;
+
+  db.query(
+    `SELECT phone_number
+     FROM mobile
+     WHERE user_id = ?
+     GROUP BY phone_number
+     ORDER BY MAX(created_at) DESC
+     LIMIT 5`,
+    [userId],
+    (err, rows) => {
+      if (err) return res.status(500).json({ message: "DB error" });
+      res.json(rows);
+    }
+  );
+});
 
 
 /** Апи написал где я буду создавать карточку автоматически 

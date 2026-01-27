@@ -19,6 +19,37 @@ document.addEventListener("DOMContentLoaded", async () => {
   } catch (e) {
     console.error(e);
   }
+  loadPhoneHistory();
+});
+
+const phoneInput = document.getElementById("phone");
+
+// Если поле пустое, подставляем +380
+phoneInput.addEventListener("focus", () => {
+  if (!phoneInput.value) {
+    phoneInput.value = "+380";
+  }
+});
+
+// Блокируем удаление +380
+phoneInput.addEventListener("keydown", (e) => {
+  // Разрешаем стрелки, цифры, backspace только после +380
+  const start = phoneInput.selectionStart;
+  if (
+    start <= 4 && 
+    (e.key === "Backspace" || e.key === "Delete")
+  ) {
+    e.preventDefault();
+  }
+});
+
+// Убираем любые символы кроме цифр после +380
+phoneInput.addEventListener("input", () => {
+  if (!phoneInput.value.startsWith("+380")) {
+    phoneInput.value = "+380";
+  }
+  // Оставляем только цифры после +380
+  phoneInput.value = "+380" + phoneInput.value.slice(4).replace(/\D/g, "");
 });
 
 function maskCard(card) {
@@ -59,7 +90,32 @@ document.getElementById("mobileForm").addEventListener("submit", async (e) => {
     alert(err.message);
   }
 });
+
 function goBack() {
   window.location.href = "/dashboard.html";
+}
+
+async function loadPhoneHistory() {
+  try {
+    const res = await authFetch("/api/mobile/history");
+    const phones = await res.json();
+
+    const container = document.getElementById("phoneHistory");
+    container.innerHTML = "";
+
+    phones.forEach(p => {
+      const el = document.createElement("div");
+      el.className = "saved-card";
+      el.textContent = p.phone_number;
+
+      el.onclick = () => {
+        document.getElementById("phone").value = p.phone_number;
+      };
+
+      container.appendChild(el);
+    });
+  } catch (e) {
+    console.error(e);
+  }
 }
 
