@@ -37,5 +37,6 @@ async function loadTransaction() {
 function goBack() {
   window.location.href = "/dashboard.html";
 }
-
+if(id){
 loadTransaction();
+}

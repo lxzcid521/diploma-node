@@ -388,7 +388,7 @@ app.post("/api/mobile", authMiddleware, (req, res) => {
           );
         }
 
-        // списываем
+        // списание
         db.query(
           "UPDATE cards SET balance = balance - ? WHERE id = ?",
           [sum, card.id],
@@ -397,21 +397,23 @@ app.post("/api/mobile", authMiddleware, (req, res) => {
               res.status(500).json({ message: "Помилка списання" })
             );
 
-            // общая история
+            // создаём транзакцию
             db.query(
               `INSERT INTO transactions (user_id, card_id, type, amount, description)
                VALUES (?, ?, 'expense', ?, ?)`,
               [userId, card.id, sum, comment || `Поповнення телефону ${phone}`],
-              err => {
+              (err, result) => {
                 if (err) return db.rollback(() =>
                   res.status(500).json({ message: "Помилка історії" })
                 );
 
-                // mobile table (ТВОЯ ТАБЛИЦА mobile)
+                const transactionId = result.insertId;
+
+                // mobile table
                 db.query(
-                  `INSERT INTO mobile (user_id, card_id, phone_number, amount)
-                   VALUES (?, ?, ?, ?)`,
-                  [userId, card.id, phone, sum],
+                  `INSERT INTO mobile (transaction_id, user_id, card_id, phone_number, amount)
+                   VALUES (?, ?, ?, ?, ?)`,
+                  [transactionId, userId, card.id, phone, sum],
                   err => {
                     if (err) return db.rollback(() =>
                       res.status(500).json({ message: "DB error" })
@@ -434,6 +436,7 @@ app.post("/api/mobile", authMiddleware, (req, res) => {
     );
   });
 });
+
 
 app.get("/api/mobile/history", authMiddleware, (req, res) => {
   const userId = req.user.id;
@@ -459,9 +462,13 @@ app.get("/api/transactions/:id", authMiddleware, (req, res) => {
 
   db.query(
     `
-    SELECT t.*, c.card_number AS target_card_number
+    SELECT 
+      t.*,
+      c.card_number AS target_card_number,
+      m.phone_number
     FROM transactions t
     LEFT JOIN cards c ON t.target_card_id = c.id
+    LEFT JOIN mobile m ON m.transaction_id = t.id
     WHERE t.id = ? AND t.user_id = ?
     `,
     [txId, userId],
@@ -469,28 +476,15 @@ app.get("/api/transactions/:id", authMiddleware, (req, res) => {
       if (err) return res.status(500).json({ error: err.message });
       if (!rows.length) return res.status(404).json({ error: "Операція не знайдена" });
 
-      const transaction = rows[0];
+      const tx = rows[0];
 
-      // проверяем mobile
-      db.query(
-        "SELECT phone_number FROM mobile WHERE user_id = ? AND amount = ? AND created_at = ? LIMIT 1",
-        [userId, transaction.amount, transaction.created_at],
-        (err, mobileRows) => {
-          if (err) return res.status(500).json({ error: err.message });
+      tx.operation_type = tx.phone_number ? "mobile" : "card";
 
-          if (mobileRows.length) {
-            transaction.phone_number = mobileRows[0].phone_number;
-            transaction.operation_type = "mobile";
-          } else {
-            transaction.operation_type = "card";
-          }
-
-          res.json(transaction);
-        }
-      );
+      res.json(tx);
     }
   );
 });
+
 
 /** Апи написал где я буду создавать карточку автоматически 
 app.post("/api/register", async (req, res) => {
