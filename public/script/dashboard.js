@@ -54,6 +54,10 @@ function renderTransactions(transactions) {
     const li = document.createElement("li");
     li.className = "transaction";
 
+    li.onclick = () => {
+      window.location.href = `/transaction.html?id=${tx.id}`;
+    };
+
     const isIncome = tx.type === "income";
     const icon = isIncome ? "⬇️" : "⬆️";
     const sign = isIncome ? "+" : "-";
@@ -67,7 +71,6 @@ function renderTransactions(transactions) {
         ${sign}${Number(tx.amount).toFixed(2)} ₴
       </div>
     `;
-
     list.appendChild(li);
   });
 }
@@ -112,3 +115,4 @@ if (mobileBtn) {
     window.location.href = "/mobile.html";
   });
 }
+

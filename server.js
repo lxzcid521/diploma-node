@@ -234,10 +234,7 @@ app.post("/api/transfer", authMiddleware, (req, res) => {
   }
 
   db.beginTransaction(err => {
-    if (err) {
-      console.error("BEGIN ERROR:", err);
-      return res.status(500).json({ error: "Помилка транзакції" });
-    }
+    if (err) return res.status(500).json({ error: "Помилка транзакції" });
 
     // Карта отправителя
     db.query(
@@ -245,7 +242,6 @@ app.post("/api/transfer", authMiddleware, (req, res) => {
       [fromUserId],
       (err, fromCards) => {
         if (err || !fromCards.length) {
-          console.error("FROM CARD ERROR:", err);
           return db.rollback(() =>
             res.status(400).json({ error: "Карта відправника не знайдена" })
           );
@@ -259,7 +255,6 @@ app.post("/api/transfer", authMiddleware, (req, res) => {
           [toCardNumber],
           (err, toCards) => {
             if (err || !toCards.length) {
-              console.error("TO CARD ERROR:", err);
               return db.rollback(() =>
                 res.status(400).json({ error: "Карта отримувача не знайдена" })
               );
@@ -270,80 +265,56 @@ app.post("/api/transfer", authMiddleware, (req, res) => {
             // Запрет перевода на ту же карту
             if (fromCard.id === toCard.id) {
               return db.rollback(() =>
-                res.status(400).json({
-                  error: "Неможливо переказати кошти на ту ж картку"
-                })
+                res.status(400).json({ error: "Неможливо переказати на ту ж картку" })
               );
             }
-
             // Проверка баланса
             if (Number(fromCard.balance) < sum) {
               return db.rollback(() =>
                 res.status(400).json({ error: "Недостатньо коштів" })
               );
             }
-
             // Cписание
             db.query(
               "UPDATE cards SET balance = balance - ? WHERE id = ?",
               [sum, fromCard.id],
               err => {
-                if (err) {
-                  console.error("DEBIT ERROR:", err);
-                  return db.rollback(() =>
-                    res.status(500).json({ error: "Помилка списання" })
-                  );
-                }
-
+                if (err) return db.rollback(() =>
+                  res.status(500).json({ error: "Помилка списання" })
+                );
                 // Начисление
                 db.query(
                   "UPDATE cards SET balance = balance + ? WHERE id = ?",
                   [sum, toCard.id],
                   err => {
-                    if (err) {
-                      console.error("CREDIT ERROR:", err);
-                      return db.rollback(() =>
-                        res.status(500).json({ error: "Помилка зарахування" })
-                      );
-                    }
-
+                    if (err) return db.rollback(() =>
+                      res.status(500).json({ error: "Помилка зарахування" })
+                    );
                     //  История отправителя
                     db.query(
-                    `INSERT INTO transactions (user_id, card_id, type, amount, description)
-                     VALUES (?, ?, 'expense', ?, ?)`,
-                     [fromUserId, fromCard.id, sum, description || "Переказ"],
-                     err => {
-                       if (err) {
-                          console.error("TX EXPENSE ERROR:", err);
-                          return db.rollback(() =>
+                      `INSERT INTO transactions 
+                      (user_id, card_id, type, amount, target_card_id, description)
+                      VALUES (?, ?, 'expense', ?, ?, ?)`,
+                      [fromUserId, fromCard.id, sum, toCard.id, description || "Переказ"],
+                      err => {
+                        if (err) return db.rollback(() =>
                           res.status(500).json({ error: "Помилка історії" })
-                          );
-                       }
-
-                    
-
+                        );
                         // История получателя
                         db.query(
-                        `INSERT INTO transactions (user_id, card_id, type, amount, description)
-                         VALUES (?, ?, 'income', ?, ?)`,
-                         [toCard.user_id, toCard.id, sum, description || "Отримання коштів"],
-                         err => {
-                         if (err) {
-                         console.error("TX INCOME ERROR:", err);
-                         return db.rollback(() =>
-                          res.status(500).json({ error: err.message })
-                         );
-                        }
-
-
+                          `INSERT INTO transactions 
+                          (user_id, card_id, type, amount, target_card_id, description)
+                          VALUES (?, ?, 'income', ?, ?, ?)`,
+                          [toCard.user_id, toCard.id, sum, fromCard.id, description || "Отримання коштів"],
+                          err => {
+                            if (err) return db.rollback(() =>
+                              res.status(500).json({ error: err.message })
+                            );
                             //  Commit
                             db.commit(err => {
-                              if (err) {
-                                console.error("COMMIT ERROR:", err);
-                                return db.rollback(() =>
-                                  res.status(500).json({ error: "Commit error" })
-                                );
-                              }
+                              if (err) return db.rollback(() =>
+                                res.status(500).json({ error: "Commit error" })
+                              );
 
                               res.json({ message: "Переказ успішний" });
                             });
@@ -361,6 +332,31 @@ app.post("/api/transfer", authMiddleware, (req, res) => {
     );
   });
 });
+
+/**API чтоб отображать историю карточек */
+app.get("/api/transfer/history", authMiddleware, (req, res) => {
+  const userId = req.user.id;
+
+  db.query(
+    `
+    SELECT c.card_number, MAX(t.created_at) AS last_transfer
+    FROM transactions t
+    JOIN cards c ON t.target_card_id = c.id
+    WHERE t.user_id = ?
+      AND t.type = 'expense'
+      AND t.target_card_id IS NOT NULL
+    GROUP BY c.card_number
+    ORDER BY last_transfer DESC
+    LIMIT 5
+    `,
+    [userId],
+    (err, rows) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json(rows);
+    }
+  );
+});
+
 
 app.post("/api/mobile", authMiddleware, (req, res) => {
   const { phone, amount, comment } = req.body;
@@ -457,6 +453,44 @@ app.get("/api/mobile/history", authMiddleware, (req, res) => {
   );
 });
 
+app.get("/api/transactions/:id", authMiddleware, (req, res) => {
+  const userId = req.user.id;
+  const txId = req.params.id;
+
+  db.query(
+    `
+    SELECT t.*, c.card_number AS target_card_number
+    FROM transactions t
+    LEFT JOIN cards c ON t.target_card_id = c.id
+    WHERE t.id = ? AND t.user_id = ?
+    `,
+    [txId, userId],
+    (err, rows) => {
+      if (err) return res.status(500).json({ error: err.message });
+      if (!rows.length) return res.status(404).json({ error: "Операція не знайдена" });
+
+      const transaction = rows[0];
+
+      // проверяем mobile
+      db.query(
+        "SELECT phone_number FROM mobile WHERE user_id = ? AND amount = ? AND created_at = ? LIMIT 1",
+        [userId, transaction.amount, transaction.created_at],
+        (err, mobileRows) => {
+          if (err) return res.status(500).json({ error: err.message });
+
+          if (mobileRows.length) {
+            transaction.phone_number = mobileRows[0].phone_number;
+            transaction.operation_type = "mobile";
+          } else {
+            transaction.operation_type = "card";
+          }
+
+          res.json(transaction);
+        }
+      );
+    }
+  );
+});
 
 /** Апи написал где я буду создавать карточку автоматически 
 app.post("/api/register", async (req, res) => {
