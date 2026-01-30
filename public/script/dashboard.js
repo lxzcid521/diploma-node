@@ -1,37 +1,39 @@
-
 document.addEventListener("DOMContentLoaded", async () => {
   const user = JSON.parse(localStorage.getItem("user"));
   if (!user) {
     window.location.href = "/index.html";
     return;
   }
- loadTransactions();
 
   document.getElementById("welcomeText").innerText = user.full_name;
 
+  loadTransactions();
+  loadCard();
+
+  setupButtons();
+  setupInactivityTimer();
+});
+
+async function loadCard() {
   try {
     const res = await authFetch("/api/card");
     const data = await res.json();
 
-    if (res.ok) {
-      document.getElementById("cardNumber").innerText = data.card_number;
-      document.getElementById("cardHolder").innerText = data.card_holder;
-      document.getElementById("cardExpiry").innerText = data.card_expiry;
-      document.getElementById("cardBalance").innerText = data.balance;
-    } else {
+    if (!res.ok) {
       alert(data.error);
+      return;
     }
+
+    document.getElementById("cardNumber").innerText = data.card_number;
+    document.getElementById("cardHolder").innerText = data.card_holder;
+    document.getElementById("cardExpiry").innerText = data.card_expiry;
+    document.getElementById("cardBalance").innerText = data.balance;
   } catch (err) {
     console.error("Ошибка загрузки карты:", err);
   }
-});
-
-function openCardDetails() {
-  alert("Деталі картки UrBank");
 }
 
- /**Получаем инфу с нашего API в самой функции ключаевая логика как я отображаю данные  */
-
+/** Загружаем список транзакций */
 async function loadTransactions() {
   const res = await authFetch("/api/transactions");
   if (!res) return;
@@ -39,7 +41,6 @@ async function loadTransactions() {
   const data = await res.json();
   renderTransactions(data);
 }
-
 
 function renderTransactions(transactions) {
   const list = document.getElementById("transactionsList");
@@ -51,11 +52,13 @@ function renderTransactions(transactions) {
   }
 
   transactions.forEach(tx => {
+    console.log("TX:", tx);
+
     const li = document.createElement("li");
     li.className = "transaction";
 
     li.onclick = () => {
-      window.location.href = `/transaction.html?id=${tx.id}`;
+      window.location.href = `/transaction.html?id=${tx.transaction_id}`;
     };
 
     const isIncome = tx.type === "income";
@@ -71,11 +74,12 @@ function renderTransactions(transactions) {
         ${sign}${Number(tx.amount).toFixed(2)} ₴
       </div>
     `;
+
     list.appendChild(li);
   });
 }
 
-/**Форматирую данные  */
+/** Формат даты */
 function formatDate(dateStr) {
   const date = new Date(dateStr);
   return date.toLocaleDateString("uk-UA", {
@@ -84,35 +88,36 @@ function formatDate(dateStr) {
     year: "numeric"
   });
 }
+
+/** Кнопки */
+function setupButtons() {
+  const transferBtn = document.getElementById("transferBtn");
+  if (transferBtn) {
+    transferBtn.addEventListener("click", () => {
+      window.location.href = "/transfer.html";
+    });
+  }
+
+  const mobileBtn = document.getElementById("mobileBtn");
+  if (mobileBtn) {
+    mobileBtn.addEventListener("click", () => {
+      window.location.href = "/mobile.html";
+    });
+  }
+}
+
+/** Таймер неактивности */
 let inactivityTimer;
 
-function resetTimer() {
-  clearTimeout(inactivityTimer);
-  inactivityTimer = setTimeout(logoutUser, 10 * 60 * 1000);
+function setupInactivityTimer() {
+  function resetTimer() {
+    clearTimeout(inactivityTimer);
+    inactivityTimer = setTimeout(logoutUser, 10 * 60 * 1000);
+  }
+
+  ["click", "mousemove", "keydown"].forEach(e =>
+    document.addEventListener(e, resetTimer)
+  );
+
+  resetTimer();
 }
-
-
-
-["click", "mousemove", "keydown"].forEach(e =>
-  document.addEventListener(e, resetTimer)
-);
-
-resetTimer();
-
-const transferBtn = document.getElementById("transferBtn");
-
-if (transferBtn) {
-  transferBtn.addEventListener("click", () => {
-    window.location.href = "/transfer.html";
-  });
-}
-
-
-const mobileBtn = document.getElementById("mobileBtn");
-
-if (mobileBtn) {
-  mobileBtn.addEventListener("click", () => {
-    window.location.href = "/mobile.html";
-  });
-}
-
