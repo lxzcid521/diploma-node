@@ -2,7 +2,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const params = new URLSearchParams(window.location.search);
   const id = params.get("id");
 
+  console.log("Transaction ID:", id);
+
   if (!id) {
+    alert("Немає id транзакції");
     window.location.href = "/dashboard.html";
     return;
   }
@@ -18,7 +21,7 @@ async function loadTransaction(id) {
     const div = document.getElementById("details");
 
     if (!res.ok) {
-      div.innerHTML = "Помилка завантаження";
+      div.innerText = "Помилка завантаження";
       return;
     }
 
@@ -45,4 +48,41 @@ async function loadTransaction(id) {
 
 function goBack() {
   window.location.href = "/dashboard.html";
+}
+async function authFetch(url, options = {}) {
+  const accessToken = localStorage.getItem("accessToken");
+
+  let res = await fetch(url, {
+    ...options,
+    headers: {
+      ...options.headers,
+      Authorization: `Bearer ${accessToken}`
+    },
+    credentials: "include"
+  });
+
+  if (res.status === 401) {
+    const refreshRes = await fetch("/api/refresh", {
+      method: "POST",
+      credentials: "include"
+    });
+
+    if (!refreshRes.ok) {
+      logoutUser();
+      return;
+    }
+
+    const data = await refreshRes.json();
+    localStorage.setItem("accessToken", data.accessToken);
+
+    return authFetch(url, options); // повтор запроса
+  }
+
+  return res;
+}
+
+function logoutUser() {
+  fetch("/api/logout", { method: "POST", credentials: "include" });
+  localStorage.clear();
+  window.location.href = "/index.html";
 }

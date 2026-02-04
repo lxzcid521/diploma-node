@@ -456,6 +456,34 @@ app.get("/api/mobile/history", authMiddleware, (req, res) => {
   );
 });
 
+app.get("/api/transactions", authMiddleware, (req, res) => {
+  const userId = req.user.id;
+
+  db.query(
+    `
+    SELECT 
+      t.id,
+      t.type,
+      t.amount,
+      t.description,
+      t.created_at,
+      t.target_card_id,
+      c2.card_number AS target_card_number
+    FROM transactions t
+    JOIN cards c1 ON t.card_id = c1.id
+    LEFT JOIN cards c2 ON t.target_card_id = c2.id
+    WHERE c1.user_id = ?
+    ORDER BY t.created_at DESC
+    `,
+    [userId],
+    (err, rows) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json(rows);
+    }
+  );
+});
+
+
 app.get("/api/transactions/:id", authMiddleware, (req, res) => {
   const userId = req.user.id;
   const txId = req.params.id;
@@ -464,12 +492,12 @@ app.get("/api/transactions/:id", authMiddleware, (req, res) => {
     `
     SELECT 
       t.*,
-      c.card_number AS target_card_number,
-      m.phone_number
+      c2.card_number AS target_card_number
     FROM transactions t
-    LEFT JOIN cards c ON t.target_card_id = c.id
-    LEFT JOIN mobile m ON m.transaction_id = t.id
-    WHERE t.id = ? AND t.user_id = ?
+    JOIN cards c1 ON t.card_id = c1.id
+    LEFT JOIN cards c2 ON t.target_card_id = c2.id
+    WHERE t.id = ? AND c1.user_id = ?
+    LIMIT 1
     `,
     [txId, userId],
     (err, rows) => {
@@ -478,12 +506,15 @@ app.get("/api/transactions/:id", authMiddleware, (req, res) => {
 
       const tx = rows[0];
 
-      tx.operation_type = tx.phone_number ? "mobile" : "card";
+      // тип операции
+      tx.operation_type = tx.target_card_id ? "card" : "mobile";
 
       res.json(tx);
     }
   );
 });
+
+
 
 
 /** Апи написал где я буду создавать карточку автоматически 
