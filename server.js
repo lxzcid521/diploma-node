@@ -182,6 +182,7 @@ app.get("/api/card",authMiddleware, (req, res) => {
     );
 });
 
+/** 
 app.get("/api/transactions",authMiddleware, (req, res) => {
     const userId = req.user.id;
 
@@ -198,7 +199,7 @@ app.get("/api/transactions",authMiddleware, (req, res) => {
         }
     );
 });
-
+*/
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Сервер запущен: http://localhost:${PORT}`));
@@ -493,9 +494,11 @@ app.get("/api/transactions/:id", authMiddleware, (req, res) => {
     SELECT 
       t.*,
       c2.card_number AS target_card_number
+      m.phone_number
     FROM transactions t
     JOIN cards c1 ON t.card_id = c1.id
     LEFT JOIN cards c2 ON t.target_card_id = c2.id
+    LEFT JOIN mobile m ON m.transaction_id = t.id
     WHERE t.id = ? AND c1.user_id = ?
     LIMIT 1
     `,
@@ -507,7 +510,7 @@ app.get("/api/transactions/:id", authMiddleware, (req, res) => {
       const tx = rows[0];
 
       // тип операции
-      tx.operation_type = tx.target_card_id ? "card" : "mobile";
+      tx.operation_type = tx.phone_number ? "card" : "mobile";
 
       res.json(tx);
     }
