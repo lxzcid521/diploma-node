@@ -101,3 +101,6 @@ function setupInactivityTimer() {
 
   resetTimer();
 }
+cardDiv.onclick = () => {
+  window.location.href = `/card.html?id=${card.id}`;
+};

@@ -469,10 +469,12 @@ app.get("/api/transactions", authMiddleware, (req, res) => {
       t.description,
       t.created_at,
       t.target_card_id,
-      c2.card_number AS target_card_number
+      c2.card_number AS target_card_number,
+      m.phone_number
     FROM transactions t
     JOIN cards c1 ON t.card_id = c1.id
     LEFT JOIN cards c2 ON t.target_card_id = c2.id
+    LEFT JOIN mobile m ON m.transaction_id = t.id
     WHERE c1.user_id = ?
     ORDER BY t.created_at DESC
     `,
@@ -485,6 +487,7 @@ app.get("/api/transactions", authMiddleware, (req, res) => {
 });
 
 
+
 app.get("/api/transactions/:id", authMiddleware, (req, res) => {
   const userId = req.user.id;
   const txId = req.params.id;
@@ -493,7 +496,7 @@ app.get("/api/transactions/:id", authMiddleware, (req, res) => {
     `
     SELECT 
       t.*,
-      c2.card_number AS target_card_number
+      c2.card_number AS target_card_number,
       m.phone_number
     FROM transactions t
     JOIN cards c1 ON t.card_id = c1.id
@@ -509,14 +512,31 @@ app.get("/api/transactions/:id", authMiddleware, (req, res) => {
 
       const tx = rows[0];
 
-      // тип операции
-      tx.operation_type = tx.phone_number ? "card" : "mobile";
+      tx.operation_type = tx.phone_number ? "mobile" : "card";
 
       res.json(tx);
     }
   );
 });
 
+
+app.get("/api/cards/:id", authMiddleware, (req, res) => {
+  const userId = req.user.id;
+  const cardId = req.params.id;
+
+  db.query(
+    `SELECT id, card_number, expiry_date, cvv, balance, iban, owner_name
+     FROM cards
+     WHERE id = ? AND user_id = ?`,
+    [cardId, userId],
+    (err, rows) => {
+      if (err) return res.status(500).json({ error: err.message });
+      if (!rows.length) return res.status(404).json({ error: "Картку не знайдено" });
+
+      res.json(rows[0]);
+    }
+  );
+});
 
 
 

@@ -24,30 +24,51 @@ async function loadTransaction(id) {
     const div = document.getElementById("details");
 
     if (!res.ok) {
-      div.innerText = "Помилка завантаження";
+      div.innerHTML = `<div class="card-box">Помилка завантаження</div>`;
       return;
     }
 
-    let html = `
-      <p><b>Сума:</b> ${tx.amount} ₴</p>
-      <p><b>Дата:</b> ${new Date(tx.created_at).toLocaleString()}</p>
-      <p><b>Коментар:</b> ${tx.description}</p>
-    `;
+    const isIncome = tx.type === "income";
+    const amountClass = isIncome ? "income" : "expense";
+    const sign = isIncome ? "+" : "-";
+
+
+    let extraInfo = "";
 
     if (tx.operation_type === "card") {
-      html += `<p><b>Картка отримувача:</b> **** ${tx.target_card_number.slice(-4)}</p>`;
+      extraInfo = `
+        <p>Картка отримувача: <span>**** ${tx.target_card_number.slice(-4)}</span></p>
+      `;
     }
 
     if (tx.operation_type === "mobile") {
-      html += `<p><b>Номер телефону:</b> ${tx.phone_number}</p>`;
+      extraInfo = `
+        <p>Номер телефону: <span>${tx.phone_number}</span></p>
+      `;
     }
 
-    div.innerHTML = html;
+    div.innerHTML = `
+      <div class="card">
+        <div class="card-header">
+          <span class="card-name">Операція</span>
+          <span class="amount ${amountClass}">${sign}${tx.amount} ₴</span>
+        </div>
+
+        <div class="card-body">
+          <div class="card-box">
+            <p>Дата: <span>${new Date(tx.created_at).toLocaleString()}</span></p>
+            <p>Коментар: <span>${tx.description || "—"}</span></p>
+            ${extraInfo}
+          </div>
+        </div>
+      </div>
+    `;
 
   } catch (err) {
     console.error("Ошибка загрузки транзакции:", err);
   }
 }
+
 
 function goBack() {
   window.location.href = "/dashboard.html";
