@@ -21,11 +21,17 @@ async function loadCard() {
     alert(data.error);
     return;
   }
-
+ console.log("CARD DATA:", data); 
+ 
   document.getElementById("cardNumber").innerText = data.card_number;
   document.getElementById("cardHolder").innerText = data.card_holder;
   document.getElementById("cardExpiry").innerText = data.card_expiry;
   document.getElementById("cardBalance").innerText = data.balance;
+  const cardDiv = document.querySelector(".card");
+
+  cardDiv.onclick = () => {
+    window.location.href = `/card.html?id=${data.id}`;
+  };
 }
 
 async function loadTransactions() {
@@ -101,6 +107,3 @@ function setupInactivityTimer() {
 
   resetTimer();
 }
-cardDiv.onclick = () => {
-  window.location.href = `/card.html?id=${card.id}`;
-};

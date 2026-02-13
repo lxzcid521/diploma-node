@@ -34,7 +34,7 @@ async function loadCard(id) {
           <div class="card-info">
             <div>
               <small>Термін дії</small><br>
-              ${card.expiry_date}
+              ${card.card_expiry}
             </div>
             <div>
               <small>CVV</small><br>
@@ -45,10 +45,10 @@ async function loadCard(id) {
 
           <div class="card-box">
             <p>IBAN: <span>${card.iban || "UA00 XXXX XXXX XXXX"}</span></p>
-            <p>Власник: <span>${card.owner_name}</span></p>
+            <p>Власник: <span>${card.card_holder}</span></p>
           </div>
 
-          <button class="btn" onclick="shareCard('${card.card_number}','${card.iban}')">
+          <button class="btn" onclick="shareCard('${card.card_number}','${card.iban}','${card.card_holder}')">
             Поділитись реквізитами
           </button>
         </div>
@@ -65,8 +65,8 @@ function toggleCVV(cvv) {
   el.textContent = el.textContent === "***" ? cvv : "***";
 }
 
-function shareCard(number, iban) {
-  const text = `Номер картки: ${number}\nIBAN: ${iban}`;
+function shareCard(number, iban, holder) {
+  const text = `Номер картки: ${number}\nIBAN: ${iban}\nОтримувач: ${holder}\n`;
 
   navigator.clipboard.writeText(text);
   alert("Реквізити скопійовано ✔");
@@ -77,40 +77,4 @@ function goBack() {
 }
 
 
-// ===== authFetch как у тебя =====
-async function authFetch(url, options = {}) {
-  const accessToken = localStorage.getItem("accessToken");
 
-  let res = await fetch(url, {
-    ...options,
-    headers: {
-      ...options.headers,
-      Authorization: `Bearer ${accessToken}`
-    },
-    credentials: "include"
-  });
-
-  if (res.status === 401) {
-    const refreshRes = await fetch("/api/refresh", {
-      method: "POST",
-      credentials: "include"
-    });
-
-    if (!refreshRes.ok) {
-      logoutUser();
-      return;
-    }
-
-    const data = await refreshRes.json();
-    localStorage.setItem("accessToken", data.accessToken);
-    return authFetch(url, options);
-  }
-
-  return res;
-}
-
-function logoutUser() {
-  fetch("/api/logout", { method: "POST", credentials: "include" });
-  localStorage.clear();
-  window.location.href = "/index.html";
-}

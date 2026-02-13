@@ -9,7 +9,6 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
 const app = express();
-
 app.use(cors({
     origin: "http://localhost:3000",
     credentials: true
@@ -171,7 +170,7 @@ app.get("/api/card",authMiddleware, (req, res) => {
     const userId = req.user.id;
 
     db.query(
-        "SELECT card_number, card_holder, card_expiry, balance FROM cards WHERE user_id = ?",
+        "SELECT id, card_number, card_holder, card_expiry, balance, cvv, iban FROM cards WHERE user_id = ?",
         [userId],
         (err, results) => {
             if (err) return res.status(500).json({ error: err });
@@ -525,7 +524,7 @@ app.get("/api/cards/:id", authMiddleware, (req, res) => {
   const cardId = req.params.id;
 
   db.query(
-    `SELECT id, card_number, expiry_date, cvv, balance, iban, owner_name
+    `SELECT id, card_number, card_holder, card_expiry, balance, cvv, iban
      FROM cards
      WHERE id = ? AND user_id = ?`,
     [cardId, userId],
