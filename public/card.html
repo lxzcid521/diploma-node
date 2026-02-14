@@ -24,7 +24,38 @@
       placeholder="Наприклад: Оплата за послуги"
     >
   </div>
+
+  <div class="container settings-box">
+  <h3>Налаштування картки</h3>
+
+  <div class="setting-row toggle-row">
+    <span>Оплата в Інтернеті</span>
+    <label class="switch">
+      <input type="checkbox" id="internetPaymentToggle">
+      <span class="slider"></span>
+    </label>
+  </div>
+
+  <div class="setting-row">
+    <label for="transferLimit">Ліміт переказів: <span id="limitValue">0</span> ₴</label>
+    <input 
+      type="range" 
+      id="transferLimit" 
+      min="0" 
+      max="20000" 
+      step="500"
+      value="0"
+      oninput="updateLimitValue(this.value)"
+    >
+  </div>
+
+  <button class="btn" onclick="saveCardSettings()">Зберегти налаштування</button>
 </div>
+
+
+</div>
+
+
 
 <script src="/script/card.js"></script>
 <script src="script/auth.js"></script>
