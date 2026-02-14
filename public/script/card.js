@@ -66,11 +66,18 @@ function toggleCVV(cvv) {
 }
 
 function shareCard(number, iban, holder) {
-  const text = `Номер картки: ${number}\nIBAN: ${iban}\nОтримувач: ${holder}\n`;
+  const purpose = document.getElementById("paymentPurpose").value || "Переказ коштів";
+
+  const text = 
+`Номер картки: ${number}
+IBAN: ${iban}
+Отримувач: ${holder}
+Призначення платежу: ${purpose}`;
 
   navigator.clipboard.writeText(text);
-  alert("Реквізити скопійовано ✔");
+  alert("Реквізити скопійовано ✔️");
 }
+
 
 function goBack() {
   window.location.href = "/dashboard.html";

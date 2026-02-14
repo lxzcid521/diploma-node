@@ -470,3 +470,22 @@ input {
   transform: translateX(4px);
 }
 
+.purpose-box {
+  margin-top: 16px;
+  
+}
+
+.purpose-box label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+  color: #87CEFA;
+}
+
+.purpose-box input {
+  width: 90%;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #B0E0E6;
+  font-size: 15px;
+}

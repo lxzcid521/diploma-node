@@ -293,8 +293,8 @@ app.post("/api/transfer", authMiddleware, (req, res) => {
                     //  История отправителя
                     db.query(
                       `INSERT INTO transactions 
-                      (user_id, card_id, type, amount, target_card_id, description)
-                      VALUES (?, ?, 'expense', ?, ?, ?)`,
+                       (user_id, card_id, type, transaction_type, amount, target_card_id, description)
+                        VALUES (?, ?, 'expense', 'card_to_card', ?, ?, ?)`,
                       [fromUserId, fromCard.id, sum, toCard.id, description || "Переказ"],
                       err => {
                         if (err) return db.rollback(() =>
@@ -303,8 +303,8 @@ app.post("/api/transfer", authMiddleware, (req, res) => {
                         // История получателя
                         db.query(
                           `INSERT INTO transactions 
-                          (user_id, card_id, type, amount, target_card_id, description)
-                          VALUES (?, ?, 'income', ?, ?, ?)`,
+                          (user_id, card_id, type, transaction_type, amount, target_card_id, description)
+                           VALUES (?, ?, 'income', 'card_to_card', ?, ?, ?)`,
                           [toCard.user_id, toCard.id, sum, fromCard.id, description || "Отримання коштів"],
                           err => {
                             if (err) return db.rollback(() =>
@@ -399,8 +399,9 @@ app.post("/api/mobile", authMiddleware, (req, res) => {
 
             // создаём транзакцию
             db.query(
-              `INSERT INTO transactions (user_id, card_id, type, amount, description)
-               VALUES (?, ?, 'expense', ?, ?)`,
+              `INSERT INTO transactions 
+               (user_id, card_id, type, transaction_type, amount, description)
+              VALUES (?, ?, 'expense', 'mobile_topup', ?, ?)`,
               [userId, card.id, sum, comment || `Поповнення телефону ${phone}`],
               (err, result) => {
                 if (err) return db.rollback(() =>
@@ -460,22 +461,23 @@ app.get("/api/transactions", authMiddleware, (req, res) => {
   const userId = req.user.id;
 
   db.query(
-    `
-    SELECT 
+    ` 
+      SELECT 
       t.id,
       t.type,
+      t.transaction_type,
       t.amount,
       t.description,
       t.created_at,
       t.target_card_id,
       c2.card_number AS target_card_number,
       m.phone_number
-    FROM transactions t
-    JOIN cards c1 ON t.card_id = c1.id
-    LEFT JOIN cards c2 ON t.target_card_id = c2.id
-    LEFT JOIN mobile m ON m.transaction_id = t.id
-    WHERE c1.user_id = ?
-    ORDER BY t.created_at DESC
+      FROM transactions t
+      JOIN cards c1 ON t.card_id = c1.id
+      LEFT JOIN cards c2 ON t.target_card_id = c2.id
+      LEFT JOIN mobile m ON m.transaction_id = t.id
+      WHERE c1.user_id = ?
+      ORDER BY t.created_at DESC
     `,
     [userId],
     (err, rows) => {
@@ -494,9 +496,9 @@ app.get("/api/transactions/:id", authMiddleware, (req, res) => {
   db.query(
     `
     SELECT 
-      t.*,
-      c2.card_number AS target_card_number,
-      m.phone_number
+    t.*,
+    c2.card_number AS target_card_number,
+    m.phone_number
     FROM transactions t
     JOIN cards c1 ON t.card_id = c1.id
     LEFT JOIN cards c2 ON t.target_card_id = c2.id
@@ -510,9 +512,9 @@ app.get("/api/transactions/:id", authMiddleware, (req, res) => {
       if (!rows.length) return res.status(404).json({ error: "Операція не знайдена" });
 
       const tx = rows[0];
-
-      tx.operation_type = tx.phone_number ? "mobile" : "card";
-
+      if (tx.transaction_type === "mobile_topup") tx.operation_type = "mobile";
+      else if (tx.transaction_type === "card_to_card") tx.operation_type = "card";
+      else if (tx.transaction_type === "iban_transfer") tx.operation_type = "iban";
       res.json(tx);
     }
   );
