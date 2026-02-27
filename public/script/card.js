@@ -21,6 +21,11 @@ async function loadCard(id) {
       return;
     }
 
+document.getElementById("internetPaymentToggle").checked = card.internet_payment_enabled;
+
+document.getElementById("transferLimit").value = card.transfer_limit;
+document.getElementById("limitValue").textContent = card.transfer_limit;
+
     document.getElementById("cardDetails").innerHTML = `
       <div class="card">
         <div class="card-header">
@@ -78,10 +83,39 @@ IBAN: ${iban}
   alert("Реквізити скопійовано ✔️");
 }
 
+function updateLimitValue(value) {
+  document.getElementById("limitValue").textContent = value;
+}
+
 
 function goBack() {
   window.location.href = "/dashboard.html";
 }
 
 
+async function saveCardSettings() {
+  const enabled = document.getElementById("internetPaymentToggle").checked;
+  const limit = Number(document.getElementById("transferLimit").value);
+
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get("id");
+
+  const res = await authFetch(`/api/cards/${id}/settings`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      internet_payment_enabled: enabled ? 1 : 0,
+      transfer_limit: limit
+    })
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    alert(data.error || "Помилка збереження");
+    return;
+  }
+
+  alert("Налаштування збережено");
+}
 

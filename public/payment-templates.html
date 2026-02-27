@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <title>Payment Templates</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <div class="top-bar">
+  <button class="back-btn" onclick="goBack()">←</button>
+  <div class="top-title">Шаблони платежів</div>
+  </div>
+
+<div class="page">
+  <div class="container">
+    <h2>💾 Мої шаблони платежів</h2>
+
+    <div class="form-box">
+      <input type="text" id="iban" placeholder="IBAN">
+      <input type="text" id="receiverName" placeholder="Отримувач">
+      <input type="text" id="purpose" placeholder="Назва шаблону">
+      <button class="btn" id="saveBtn">Зберегти шаблон</button>
+    </div>
+    <div id="templatesList" class="templates-list"></div>
+  </div>
+</div>
+
+  <script src="script/auth.js"></script>
+  <script src="script/payment-templates.js"></script>
+</body>
+</html>

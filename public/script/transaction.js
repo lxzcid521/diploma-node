@@ -46,7 +46,12 @@ async function loadTransaction(id) {
         <p>Номер телефону: <span>${tx.phone_number}</span></p>
       `;
     }
-
+    if (tx.operation_type === "iban") {
+  extraInfo = `
+    <p>Отримувач: <span>${tx.receiver_name}</span></p>
+    <p>IBAN: <span>${tx.receiver_iban}</span></p>
+  `;
+}
     div.innerHTML = `
       <div class="card">
         <div class="card-header">

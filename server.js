@@ -229,6 +229,7 @@ app.post("/api/transfer", authMiddleware, (req, res) => {
 
   const sum = Number(amount);
 
+
   if (!toCardNumber || !Number.isFinite(sum) || sum <= 0) {
     return res.status(400).json({ error: "Невірні дані" });
   }
@@ -248,6 +249,20 @@ app.post("/api/transfer", authMiddleware, (req, res) => {
         }
 
         const fromCard = fromCards[0];
+
+        // проверка интернет-платежа (если это онлайн операция)
+if (fromCard.internet_payment_enabled === 0) {
+  return db.rollback(() =>
+    res.status(403).json({ error: "Оплата в інтернеті вимкнена" })
+  );
+}
+
+// проверка лимита
+if (fromCard.transfer_limit > 0 && sum > fromCard.transfer_limit) {
+  return db.rollback(() =>
+    res.status(400).json({ error: "Перевищено ліміт картки" })
+  );
+}
 
         // Карта получателя
         db.query(
@@ -332,6 +347,133 @@ app.post("/api/transfer", authMiddleware, (req, res) => {
     );
   });
 });
+
+app.post("/api/iban-transfer", authMiddleware, (req, res) => {
+  const userId = req.user.id;
+  const { iban, receiverName, amount, purpose } = req.body;
+  const sum = Number(amount);
+
+  if (!iban || !receiverName || !Number.isFinite(sum) || sum <= 0) {
+    return res.status(400).json({ error: "Невірні дані" });
+  }
+
+  db.beginTransaction(err => {
+    if (err) return res.status(500).json({ error: "Transaction error" });
+
+    // 1. карта отправителя
+    db.query(
+      "SELECT * FROM cards WHERE user_id = ? FOR UPDATE",
+      [userId],
+      (err, fromCards) => {
+        if (err || !fromCards.length) {
+          return db.rollback(() =>
+            res.status(404).json({ error: "Картка відправника не знайдена" })
+          );
+        }
+
+        const fromCard = fromCards[0];
+
+        if (fromCard.internet_payment_enabled === 0) {
+  return db.rollback(() =>
+    res.status(403).json({ error: "Оплата в інтернеті вимкнена" })
+  );
+}
+
+if (fromCard.transfer_limit > 0 && sum > fromCard.transfer_limit) {
+  return db.rollback(() =>
+    res.status(400).json({ error: "Перевищено ліміт картки" })
+  );
+}
+        // 2. карта получателя по IBAN
+        db.query(
+          "SELECT * FROM cards WHERE iban = ? FOR UPDATE",
+          [iban],
+          (err, toCards) => {
+            if (err || !toCards.length) {
+              return db.rollback(() =>
+                res.status(404).json({ error: "Отримувач з таким IBAN не знайдений" })
+              );
+            }
+
+            const toCard = toCards[0];
+
+            // запрет самому себе
+            if (fromCard.id === toCard.id) {
+              return db.rollback(() =>
+                res.status(400).json({ error: "Неможливо переказати кошти самому собі" })
+              );
+            }
+
+            // проверка баланса
+            if (Number(fromCard.balance) < sum) {
+              return db.rollback(() =>
+                res.status(400).json({ error: "Недостатньо коштів" })
+              );
+            }
+
+            // 3. списание
+            db.query(
+              "UPDATE cards SET balance = balance - ? WHERE id = ?",
+              [sum, fromCard.id],
+              err => {
+                if (err) return db.rollback(() =>
+                  res.status(500).json({ error: "Помилка списання" })
+                );
+
+                // 4. зачисление
+                db.query(
+                  "UPDATE cards SET balance = balance + ? WHERE id = ?",
+                  [sum, toCard.id],
+                  err => {
+                    if (err) return db.rollback(() =>
+                      res.status(500).json({ error: "Помилка зарахування" })
+                    );
+
+                    // 5. история отправителя
+                    db.query(
+                      `INSERT INTO transactions
+                       (user_id, card_id, type, transaction_type, amount, target_card_id, description, receiver_iban, receiver_name)
+                       VALUES (?, ?, 'expense', 'iban_transfer', ?, ?, ?, ?, ?)`,
+                      [userId, fromCard.id, sum, toCard.id, purpose || "IBAN переказ", iban, receiverName],
+                      err => {
+                        if (err) return db.rollback(() =>
+                          res.status(500).json({ error: "Помилка історії" })
+                        );
+
+                        // 6. история получателя
+                        db.query(
+                          `INSERT INTO transactions
+                           (user_id, card_id, type, transaction_type, amount, target_card_id, description, receiver_iban, receiver_name)
+                           VALUES (?, ?, 'income', 'iban_transfer', ?, ?, ?, ?, ?)`,
+                          [toCard.user_id, toCard.id, sum, fromCard.id, "Отримання по IBAN", iban, receiverName],
+                          err => {
+                            if (err) return db.rollback(() =>
+                              res.status(500).json({ error: "Помилка історії отримувача" })
+                            );
+
+                            db.commit(err => {
+                              if (err) return db.rollback(() =>
+                                res.status(500).json({ error: "Commit error" })
+                              );
+
+                              res.json({ message: "Переказ виконано успішно" });
+                            });
+                          }
+                        );
+                      }
+                    );
+                  }
+                );
+              }
+            );
+          }
+        );
+      }
+    );
+  });
+});
+
+
 
 /**API чтоб отображать историю карточек */
 app.get("/api/transfer/history", authMiddleware, (req, res) => {
@@ -498,7 +640,9 @@ app.get("/api/transactions/:id", authMiddleware, (req, res) => {
     SELECT 
     t.*,
     c2.card_number AS target_card_number,
-    m.phone_number
+    m.phone_number,
+    t.receiver_iban,
+    t.receiver_name
     FROM transactions t
     JOIN cards c1 ON t.card_id = c1.id
     LEFT JOIN cards c2 ON t.target_card_id = c2.id
@@ -521,25 +665,199 @@ app.get("/api/transactions/:id", authMiddleware, (req, res) => {
 });
 
 
+app.put("/api/cards/:id/settings", authMiddleware, (req, res) => {
+  const userId = req.user.id;
+  const cardId = req.params.id;
+  const { transfer_limit, internet_payment_enabled } = req.body;
+
+  db.query(
+    `UPDATE cards
+     SET transfer_limit = ?, internet_payment_enabled = ?
+     WHERE id = ? AND user_id = ?`,
+    [transfer_limit, internet_payment_enabled, cardId, userId],
+    err => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ message: "Налаштування збережено" });
+    }
+  );
+});
+
 app.get("/api/cards/:id", authMiddleware, (req, res) => {
   const userId = req.user.id;
   const cardId = req.params.id;
 
   db.query(
-    `SELECT id, card_number, card_holder, card_expiry, balance, cvv, iban
+    `SELECT id, card_number, card_holder, card_expiry, balance, cvv, iban,
+            transfer_limit, internet_payment_enabled
      FROM cards
      WHERE id = ? AND user_id = ?`,
     [cardId, userId],
     (err, rows) => {
       if (err) return res.status(500).json({ error: err.message });
       if (!rows.length) return res.status(404).json({ error: "Картку не знайдено" });
-
       res.json(rows[0]);
     }
   );
 });
 
+app.post("/api/templates", authMiddleware, (req, res) => {
+  const { iban, receiverName, purpose } = req.body;
+  const userId = req.user.id;
 
+  if (!iban || !receiverName) {
+    return res.status(400).json({ error: "Немає даних для шаблону" });
+  }
+
+  // Проверка на дубликат
+  db.query(
+    `SELECT id FROM payment_templates 
+     WHERE user_id = ? AND iban = ? AND receiver_name = ?`,
+    [userId, iban, receiverName],
+    (err, rows) => {
+      if (err) return res.status(500).json({ error: err.message });
+
+      if (rows.length > 0) {
+        return res.status(400).json({ error: "Такий шаблон вже існує" });
+      }
+
+      db.query(
+        `INSERT INTO payment_templates (user_id, iban, receiver_name, purpose)
+         VALUES (?, ?, ?, ?)`,
+        [userId, iban, receiverName, purpose],
+        err => {
+          if (err) return res.status(500).json({ error: err.message });
+          res.json({ message: "Шаблон збережено" });
+        }
+      );
+    }
+  );
+});
+
+
+app.get("/api/templates", authMiddleware, (req, res) => {
+  db.query(
+    "SELECT * FROM payment_templates WHERE user_id = ?",
+    [req.user.id],
+    (err, rows) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json(rows);
+    }
+  );
+});
+
+app.put("/api/templates/:id", authMiddleware, (req, res) => {
+  const { purpose } = req.body;
+  const userId = req.user.id;
+  const id = req.params.id;
+
+  db.query(
+    `UPDATE payment_templates 
+     SET purpose = ? 
+     WHERE id = ? AND user_id = ?`,
+    [purpose, id, userId],
+    err => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ message: "Оновлено" });
+    }
+  );
+});
+
+app.delete("/api/templates/:id", authMiddleware, (req, res) => {
+  db.query(
+    "DELETE FROM payment_templates WHERE id = ? AND user_id = ?",
+    [req.params.id, req.user.id],
+    err => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ message: "Видалено" });
+    }
+  );
+});
+
+app.post("/api/internet-payment", authMiddleware, (req, res) => {
+  const userId = req.user.id;
+  const { serviceName, amount, purpose } = req.body;
+  const sum = Number(amount);
+
+  if (!serviceName || !sum || sum <= 0) {
+    return res.status(400).json({ error: "Невірні дані" });
+  }
+
+  db.beginTransaction(err => {
+    if (err) return res.status(500).json({ error: "Transaction error" });
+
+    db.query(
+      "SELECT * FROM cards WHERE user_id = ? FOR UPDATE",
+      [userId],
+      (err, cards) => {
+        if (err || !cards.length) {
+          return db.rollback(() =>
+            res.status(404).json({ error: "Картка не знайдена" })
+          );
+        }
+
+        const card = cards[0];
+
+        //  интернет-платежи
+        if (card.internet_payment_enabled === 0) {
+          return db.rollback(() =>
+            res.status(403).json({ error: "Інтернет-платежі вимкнені" })
+          );
+        }
+
+        //  лимит
+        if (card.transfer_limit > 0 && sum > card.transfer_limit) {
+          return db.rollback(() =>
+            res.status(400).json({ error: "Перевищено ліміт картки" })
+          );
+        }
+
+        //  баланс
+        if (Number(card.balance) < sum) {
+          return db.rollback(() =>
+            res.status(400).json({ error: "Недостатньо коштів" })
+          );
+        }
+
+        // списываем
+        db.query(
+          "UPDATE cards SET balance = balance - ? WHERE id = ?",
+          [sum, card.id],
+          err => {
+            if (err) return db.rollback(() =>
+              res.status(500).json({ error: "Помилка списання" })
+            );
+
+            // пишем транзакцию
+            db.query(
+              `INSERT INTO transactions
+               (user_id, card_id, type, transaction_type, amount, description)
+               VALUES (?, ?, 'expense', 'internet_payment', ?, ?)`,
+              [
+                userId,
+                card.id,
+                sum,
+                purpose || `Оплата сервісу ${serviceName}`
+              ],
+              err => {
+                if (err) return db.rollback(() =>
+                  res.status(500).json({ error: "Помилка створення транзакції" })
+                );
+
+                db.commit(err => {
+                  if (err) return db.rollback(() =>
+                    res.status(500).json({ error: "Commit error" })
+                  );
+
+                  res.json({ message: "Платіж успішний" });
+                });
+              }
+            );
+          }
+        );
+      }
+    );
+  });
+});
 
 /** Апи написал где я буду создавать карточку автоматически 
 app.post("/api/register", async (req, res) => {

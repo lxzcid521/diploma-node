@@ -17,42 +17,27 @@
     Завантаження...
   </div>
   <div class="container purpose-box">
-    <label for="paymentPurpose">Призначення платежу</label>
-    <input 
-      type="text" 
-      id="paymentPurpose" 
-      placeholder="Наприклад: Оплата за послуги"
-    >
-  </div>
-
-  <div class="container settings-box">
-  <h3>Налаштування картки</h3>
-
-  <div class="setting-row toggle-row">
-    <span>Оплата в Інтернеті</span>
-    <label class="switch">
-      <input type="checkbox" id="internetPaymentToggle">
-      <span class="slider"></span>
-    </label>
-  </div>
-
-  <div class="setting-row">
-    <label for="transferLimit">Ліміт переказів: <span id="limitValue">0</span> ₴</label>
-    <input 
-      type="range" 
-      id="transferLimit" 
-      min="0" 
-      max="20000" 
-      step="500"
-      value="0"
-      oninput="updateLimitValue(this.value)"
-    >
-  </div>
-
-  <button class="btn" onclick="saveCardSettings()">Зберегти налаштування</button>
+  <label>Призначення платежу</label>
+  <input type="text" id="paymentPurpose"placeholder="Наприклад: Оплата за послуги">
+  
 </div>
 
+<div class="container settings-box">
+  <h3>Оплата в Інтернеті</h3>
+  <label class="switch">
+    <input type="checkbox" id="internetPaymentToggle">
+    <span class="slider"></span>
+  </label>
+</div>
 
+<div class="container settings-box">
+  <h3>Ліміт переказів</h3>
+  <label>Сума: <span id="limitValue">0</span> ₴</label>
+  <input type="range" id="transferLimit" min="0" max="20000" step="500" value="0"
+         oninput="updateLimitValue(this.value)">
+  <button class="btn" onclick="saveCardSettings()">Зберегти налаштування</button>
+
+</div>
 </div>
 
 

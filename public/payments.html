@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <title>Платежі</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="top-bar">
+  <button class="back-btn" onclick="goBack()">←</button>
+  <div class="top-title">Платежі</div>
+</header>
+
+<div class="page">
+  <div class="payments-page">
+
+  <div class="payment-card" onclick="goToTransfer()">
+    <div class="icon">💳</div>
+    <h3>Переказ за реквізитами</h3>
+    <p>IBAN</p>
+  </div>
+
+  <div class="payment-card" onclick="goToInternetPayment()">
+    <div class="icon">🌐</div>
+    <h3>Оплата в Інтернеті</h3>
+    <p>Сервіси та магазини</p>
+  </div>
+
+  <div class="payment-card" onclick="goToTemplates()">
+    <div class="icon">⭐</div>
+    <h3>Шаблони платежів</h3>
+    <p>Збережені перекази</p>
+  </div>
+
+  </div>
+</div>
+
+<script src="script/auth.js"></script>
+<script src="script/payments.js"></script>
+</body>
+</html>

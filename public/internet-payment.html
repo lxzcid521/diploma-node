@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <title>Оплата в Інтернеті</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="top-bar">
+  <button class="back-btn" onclick="goBack()">←</button>
+  <div class="top-title">Оплата в Інтернеті</div>
+</div>
+
+<div class="page">
+<div class="internet-page">
+
+  <h3 class="section-title">Популярні сервіси</h3>
+
+  <div class="services-grid">
+    <div class="service-card" onclick="selectService('Netflix')">🎬 Netflix</div>
+    <div class="service-card" onclick="selectService('Spotify')">🎵 Spotify</div>
+    <div class="service-card" onclick="selectService('Steam')">🎮 Steam</div>
+    <div class="service-card" onclick="selectService('Apple')">🍎 Apple</div>
+    <div class="service-card" onclick="selectService('Google')">📱 Google</div>
+    <div class="service-card" onclick="selectService('Amazon')">📦 Amazon</div>
+  </div>
+
+  <div class="container payment-box">
+    <h3>Дані платежу</h3>
+
+    <input type="text" id="serviceName" placeholder="Назва сервісу">
+    <input type="number" id="amount" placeholder="Сума (₴)">
+    <input type="text" id="purpose" placeholder="Призначення платежу">
+
+    <button class="btn" onclick="openConfirm()">Оплатити</button>
+
+    <p id="statusMsg"></p>
+  </div>
+
+  </div>
+
+</div>
+
+
+<div class="modal" id="confirmModal">
+  <div class="modal-content">
+    <h3>Підтвердження платежу</h3>
+    <p id="confirmText"></p>
+
+    <button class="btn" onclick="confirmPayment()">Підтвердити</button>
+    <button class="btn cancel" onclick="closeModal()">Скасувати</button>
+  </div>
+</div>
+
+<script src="script/auth.js"></script>
+<script src="script/internet-payment.js"></script>
+</body>
+</html>

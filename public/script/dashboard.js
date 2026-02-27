@@ -92,6 +92,9 @@ function setupButtons() {
   document.getElementById("mobileBtn")?.addEventListener("click", () => {
     window.location.href = "/mobile.html";
   });
+  document.getElementById("paymentsBtn")?.addEventListener("click", () => {
+    window.location.href = "/payments.html";
+  });
 }
 
 let inactivityTimer;
