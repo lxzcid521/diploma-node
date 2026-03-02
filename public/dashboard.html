@@ -6,7 +6,15 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-
+<div id="profileSidebar" class="sidebar">
+  <button class="close-btn" id="closeSidebar">&times;</button>
+  <div class="sidebar-content">
+    <h2>Профіль</h2>
+    <p><strong>Ім'я:</strong> <span id="profileName"></span></p>
+    <p><strong>Email:</strong> <span id="profileEmail"></span></p>
+    <button class="btn" onclick="window.location.href='/analytics.html'">Аналітика</button>
+  </div>
+</div>
 <header class="top-bar">
   <button class="profile-btn">👤</button>
   <div class="top-title">UrBank</div>

@@ -858,7 +858,22 @@ app.post("/api/internet-payment", authMiddleware, (req, res) => {
     );
   });
 });
-
+app.get("/api/analytics", authMiddleware, (req, res) => {
+    const userId = req.user.id;
+    
+    // Добавляем IS NOT NULL для transaction_type
+    const query = `
+        SELECT transaction_type, type, SUM(amount) as total 
+        FROM transactions 
+        WHERE user_id = ? AND transaction_type IS NOT NULL
+        GROUP BY transaction_type, type
+    `;
+    
+    db.query(query, [userId], (err, results) => {
+        if (err) return res.status(500).json({ error: "Помилка аналітики" });
+        res.json(results);
+    });
+});
 /** Апи написал где я буду создавать карточку автоматически 
 app.post("/api/register", async (req, res) => {
   const { full_name, email, password, phone } = req.body;

@@ -1,3 +1,31 @@
+const profileBtn = document.querySelector('.profile-btn');
+const sidebar = document.getElementById('profileSidebar');
+const closeSidebar = document.getElementById('closeSidebar');
+const logoutBtn = document.getElementById('logoutBtn');
+
+profileBtn.addEventListener('click', (e) => {
+  e.stopPropagation(); 
+  sidebar.classList.add('active');
+});
+
+closeSidebar.addEventListener('click', () => {
+  sidebar.classList.remove('active');
+});
+
+document.addEventListener('click', (e) => {
+  if (sidebar.classList.contains('active') && !sidebar.contains(e.target) && e.target !== profileBtn) {
+    sidebar.classList.remove('active');
+  }
+});
+
+
+const user = JSON.parse(localStorage.getItem('user')); 
+if (user) {
+  document.getElementById('profileName').textContent = user.full_name;
+  document.getElementById('profileEmail').textContent = user.email;
+}
+
+
 document.addEventListener("DOMContentLoaded", async () => {
   const user = JSON.parse(localStorage.getItem("user"));
   if (!user) {

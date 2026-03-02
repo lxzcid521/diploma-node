@@ -728,3 +728,41 @@ input[type=range] {
 .section-title {
   margin-bottom: 15px;
 }
+.sidebar {
+  height: 100%;
+  width: 300px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  background-color: #008B8B;
+  color: white;
+  transition: 0.5s;
+  transform: translateX(-100%); 
+  z-index: 1000;
+  padding: 20px;
+  box-shadow: 2px 0 10px rgba(0,0,0,0.3);
+}
+
+.sidebar.active {
+  transform: translateX(0); 
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 30px;
+  cursor: pointer;
+}
+
+.sidebar-content {
+  margin-top: 50px;
+}
+.chart-container {
+    background: #008B8B; 
+    padding: 20px; 
+    border-radius: 15px; 
+    margin-bottom: 20px;
+    height: 350px; 
+    position: relative;
+}
