@@ -26,3 +26,4 @@
 {"amount":2000000000000000000,"level":"info","message":"Transfer request","sender":1,"timestamp":"2026-03-14T09:41:07.857Z","toCard":"5555666677778888"}
 {"level":"info","message":"Server started","timestamp":"2026-03-14T09:41:53.090Z"}
 {"amount":2000000000000000000,"level":"info","message":"Transfer request","sender":1,"timestamp":"2026-03-14T09:42:04.251Z","toCard":"5555666677778888"}
+{"amount":200,"level":"info","message":"Transfer request","sender":1,"timestamp":"2026-03-14T09:42:21.333Z","toCard":"555566667777888"}
