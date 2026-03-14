@@ -316,13 +316,23 @@ if (fromCard.transfer_limit > 0 && sum > fromCard.transfer_limit) {
               );
             }
             // Cписание
-            db.query(
-              "UPDATE cards SET balance = balance - ? WHERE id = ?",
-              [sum, fromCard.id],
-              err => {
-                if (err) return db.rollback(() =>
-                  res.status(500).json({ error: "Помилка списання" })
-                );
+            // Cписание
+db.query(
+  "UPDATE cards SET balance = balance - ? WHERE id = ?",
+  [sum, fromCard.id],
+  err => {
+    if (err) {
+      logger.error("Transfer debit error", {
+        sender: fromUserId,
+        cardId: fromCard.id,
+        amount: sum,
+        error: err.message
+      });
+
+      return db.rollback(() =>
+        res.status(500).json({ error: "Помилка списання" })
+      );
+    }
                 // Начисление
                 db.query(
                   "UPDATE cards SET balance = balance + ? WHERE id = ?",
@@ -437,14 +447,7 @@ if (fromCard.transfer_limit > 0 && sum > fromCard.transfer_limit) {
               );
             }
 
-            // 3. списание
-            db.query(
-              "UPDATE cards SET balance = balance - ? WHERE id = ?",
-              [sum, fromCard.id],
-              err => {
-                if (err) return db.rollback(() =>
-                  res.status(500).json({ error: "Помилка списання" })
-                );
+            
 
                 // 4. зачисление
                 db.query(
@@ -497,7 +500,6 @@ if (fromCard.transfer_limit > 0 && sum > fromCard.transfer_limit) {
       }
     );
   });
-});
 
 
 
