@@ -7,7 +7,8 @@ const db = require("./config/db");
 const path = require("path");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-
+const logger = require("./logger");
+const morgan = require("morgan");
 const app = express();
 app.use(cors({
     origin: "http://localhost:3000",
@@ -16,10 +17,28 @@ app.use(cors({
 app.use(cookieParser());
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, "public")));
+app.use(morgan("combined"));
+logger.info("Server started");
 
 const ACCESS_SECRET = "ACCESS_SECRET_KEY_123";
 const REFRESH_SECRET = "REFRESH_SECRET_KEY_456";
 
+const rateLimit = require("express-rate-limit");
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 минут
+  max: 100, // максимум 100 запросов
+  message: "Too many requests, please try again later."
+});
+
+const loginLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 5,
+  message: "Too many login attempts"
+});
+
+app.use("/api/login", loginLimiter);
+app.use("/api/", apiLimiter);
 // ----------------------------------------------------
 // Генерация токенов
 // ----------------------------------------------------
@@ -74,6 +93,10 @@ app.post("/api/register", async (req, res) => {
 // Логин (сообщаем токены)
 // ----------------------------------------------------
 app.post("/api/login", (req, res) => {
+
+   logger.info("User login attempt", {
+    email: req.body.email
+  });
     const { email, password } = req.body;
 
     db.query("SELECT * FROM users WHERE email = ?", [email], async (err, results) => {
@@ -224,12 +247,15 @@ function authMiddleware(req, res, next) {
 /** Апи для для записи в транзакции история обновляеться*/
 
 app.post("/api/transfer", authMiddleware, (req, res) => {
+  
   const fromUserId = req.user.id;
   const { toCardNumber, amount, description } = req.body;
-
   const sum = Number(amount);
-
-
+  logger.info("Transfer request", {
+  sender: fromUserId,
+  toCard: toCardNumber,
+  amount: sum
+});
   if (!toCardNumber || !Number.isFinite(sum) || sum <= 0) {
     return res.status(400).json({ error: "Невірні дані" });
   }

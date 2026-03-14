@@ -1,0 +1,18 @@
+{"level":"info","message":"Server started","timestamp":"2026-03-14T08:53:48.390Z"}
+{"level":"info","message":"Server started","timestamp":"2026-03-14T08:55:59.577Z"}
+{"level":"info","message":"Server started","timestamp":"2026-03-14T09:05:52.071Z"}
+{"email":"ignatenkos195@gmail.com","level":"info","message":"User login attempt","timestamp":"2026-03-14T09:05:57.524Z"}
+{"amount":200,"level":"info","message":"Transfer request","sender":1,"timestamp":"2026-03-14T09:06:11.966Z","toCard":"555566667777888"}
+{"amount":200,"level":"info","message":"Transfer request","sender":1,"timestamp":"2026-03-14T09:06:27.957Z","toCard":"555566667777888"}
+{"amount":200,"level":"info","message":"Transfer request","sender":1,"timestamp":"2026-03-14T09:06:38.734Z","toCard":"5555666677778888"}
+{"amount":100,"level":"info","message":"Transfer request","sender":1,"timestamp":"2026-03-14T09:07:00.230Z","toCard":"5555666677778888"}
+{"level":"info","message":"Server started","timestamp":"2026-03-14T09:09:56.130Z"}
+{"email":"ignatenkos195@gmail.co","level":"info","message":"User login attempt","timestamp":"2026-03-14T09:11:20.115Z"}
+{"email":"ignatenkos195@gmail.co","level":"info","message":"User login attempt","timestamp":"2026-03-14T09:11:21.871Z"}
+{"email":"ignatenkos195@gmail.co","level":"info","message":"User login attempt","timestamp":"2026-03-14T09:11:23.715Z"}
+{"email":"ignatenkos195@gmail.co","level":"info","message":"User login attempt","timestamp":"2026-03-14T09:11:25.374Z"}
+{"email":"ignatenkos195@gmail.co","level":"info","message":"User login attempt","timestamp":"2026-03-14T09:11:26.954Z"}
+{"level":"info","message":"Server started","timestamp":"2026-03-14T09:13:55.467Z"}
+{"email":"ignatenkos195@gmail.com","level":"info","message":"User login attempt","timestamp":"2026-03-14T09:13:59.392Z"}
+{"level":"info","message":"Server started","timestamp":"2026-03-14T09:21:23.497Z"}
+{"amount":200,"level":"info","message":"Transfer request","sender":1,"timestamp":"2026-03-14T09:21:31.490Z","toCard":"5555666677778888"}
