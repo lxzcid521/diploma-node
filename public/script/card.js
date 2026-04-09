@@ -80,7 +80,7 @@ IBAN: ${iban}
 Призначення платежу: ${purpose}`;
 
   navigator.clipboard.writeText(text);
-  alert("Реквізити скопійовано ✔️");
+  alert("Реквізити скопійовано !");
 }
 
 function updateLimitValue(value) {

@@ -104,7 +104,7 @@ async function authFetch(url, options = {}) {
     const data = await refreshRes.json();
     localStorage.setItem("accessToken", data.accessToken);
 
-    return authFetch(url, options); // повтор запроса
+    return authFetch(url, options); 
   }
 
   return res;

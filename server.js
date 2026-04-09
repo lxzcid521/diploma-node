@@ -16,8 +16,8 @@ app.use(cors({
 }));
 app.use(cookieParser());
 app.use(bodyParser.json());
-app.use(express.static(path.join(__dirname, "public")));
 app.use(morgan("combined"));
+app.use(express.static(path.join(__dirname, "public")));
 logger.info("Server started");
 
 const ACCESS_SECRET = "ACCESS_SECRET_KEY_123";
@@ -26,8 +26,8 @@ const REFRESH_SECRET = "REFRESH_SECRET_KEY_456";
 const rateLimit = require("express-rate-limit");
 
 const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 минут
-  max: 100, // максимум 100 запросов
+  windowMs: 15 * 60 * 1000, 
+  max: 100, 
   message: "Too many requests, please try again later."
 });
 
@@ -39,9 +39,8 @@ const loginLimiter = rateLimit({
 
 app.use("/api/login", loginLimiter);
 app.use("/api/", apiLimiter);
-// ----------------------------------------------------
-// Генерация токенов
-// ----------------------------------------------------
+
+
 function createAccessToken(user) {
     return jwt.sign(
         { id: user.id, email: user.email },
@@ -58,14 +57,11 @@ function createRefreshToken(user) {
     );
 }
 
-// Главная страница
 app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-// ----------------------------------------------------
-// Регистрация
-// ----------------------------------------------------
+
 app.post("/api/register", async (req, res) => {
     const { full_name, email, password, phone } = req.body;
     if (!full_name || !email || !password)
@@ -89,9 +85,7 @@ app.post("/api/register", async (req, res) => {
     );
 });
 
-// ----------------------------------------------------
-// Логин (сообщаем токены)
-// ----------------------------------------------------
+
 app.post("/api/login", (req, res) => {
 
    logger.info("User login attempt", {
@@ -108,11 +102,9 @@ app.post("/api/login", (req, res) => {
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) return res.status(400).json({ error: "Неправильний пароль!" });
 
-        // Генерация токенов
         const accessToken = createAccessToken(user);
         const refreshToken = createRefreshToken(user);
 
-        // Сохраняем refresh в базе
         const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
         db.query(
@@ -120,10 +112,9 @@ app.post("/api/login", (req, res) => {
             [user.id, refreshToken, expires]
         );
 
-        // Записываем refresh в cookie (HttpOnly)
         res.cookie("refreshToken", refreshToken, {
             httpOnly: true,
-            secure: false, // поставить true на проде (https)
+            secure: false, 
             sameSite: "strict",
             maxAge: 7 * 24 * 60 * 60 * 1000
         });
@@ -136,15 +127,12 @@ app.post("/api/login", (req, res) => {
     });
 });
 
-// ----------------------------------------------------
-// Обновление Access Token
-// ----------------------------------------------------
+
 app.post("/api/refresh", (req, res) => {
     const token = req.cookies.refreshToken;
 
     if (!token) return res.status(401).json({ error: "Немає refresh токена" });
 
-    // Проверяем, есть ли в БД
     db.query(
         "SELECT * FROM refresh_tokens WHERE token = ?",
         [token],
@@ -164,9 +152,7 @@ app.post("/api/refresh", (req, res) => {
     );
 });
 
-// ----------------------------------------------------
-// Логаут (удаление refresh token)
-// ----------------------------------------------------
+
 app.post("/api/logout", (req, res) => {
     const token = req.cookies.refreshToken;
 
@@ -178,9 +164,7 @@ app.post("/api/logout", (req, res) => {
     res.json({ message: "Logged out" });
 });
 
-// ----------------------------------------------------
-// Все пользователи (тест API)
-// ----------------------------------------------------
+
 app.get("/api/users", (req, res) => {
     db.query("SELECT id, full_name, email, phone FROM users", (err, results) => {
         if (err) return res.status(500).json({ error: err });
@@ -188,7 +172,6 @@ app.get("/api/users", (req, res) => {
     });
 });
 
-// Получить карту и баланс пользователя
 app.get("/api/card",authMiddleware, (req, res) => {
     const userId = req.user.id;
 
@@ -228,7 +211,6 @@ app.listen(PORT, () => console.log(`Сервер запущен: http://localhos
 
 
 
-/**Проверка access token на backend */
 
 function authMiddleware(req, res, next) {
   const authHeader = req.headers.authorization;
@@ -244,7 +226,6 @@ function authMiddleware(req, res, next) {
   });
 }
 
-/** Апи для для записи в транзакции история обновляеться*/
 
 app.post("/api/transfer", authMiddleware, (req, res) => {
   
@@ -263,7 +244,6 @@ app.post("/api/transfer", authMiddleware, (req, res) => {
   db.beginTransaction(err => {
     if (err) return res.status(500).json({ error: "Помилка транзакції" });
 
-    // Карта отправителя
     db.query(
       "SELECT * FROM cards WHERE user_id = ? FOR UPDATE",
       [fromUserId],
@@ -276,21 +256,18 @@ app.post("/api/transfer", authMiddleware, (req, res) => {
 
         const fromCard = fromCards[0];
 
-        // проверка интернет-платежа (если это онлайн операция)
 if (fromCard.internet_payment_enabled === 0) {
   return db.rollback(() =>
     res.status(403).json({ error: "Оплата в інтернеті вимкнена" })
   );
 }
 
-// проверка лимита
 if (fromCard.transfer_limit > 0 && sum > fromCard.transfer_limit) {
   return db.rollback(() =>
     res.status(400).json({ error: "Перевищено ліміт картки" })
   );
 }
 
-        // Карта получателя
         db.query(
           "SELECT * FROM cards WHERE card_number = ? FOR UPDATE",
           [toCardNumber],
@@ -303,20 +280,17 @@ if (fromCard.transfer_limit > 0 && sum > fromCard.transfer_limit) {
 
             const toCard = toCards[0];
 
-            // Запрет перевода на ту же карту
             if (fromCard.id === toCard.id) {
               return db.rollback(() =>
                 res.status(400).json({ error: "Неможливо переказати на ту ж картку" })
               );
             }
-            // Проверка баланса
             if (Number(fromCard.balance) < sum) {
               return db.rollback(() =>
                 res.status(400).json({ error: "Недостатньо коштів" })
               );
             }
-            // Cписание
-            // Cписание
+            
 db.query(
   "UPDATE cards SET balance = balance - ? WHERE id = ?",
   [sum, fromCard.id],
@@ -333,7 +307,6 @@ db.query(
         res.status(500).json({ error: "Помилка списання" })
       );
     }
-                // Начисление
                 db.query(
                   "UPDATE cards SET balance = balance + ? WHERE id = ?",
                   [sum, toCard.id],
@@ -341,7 +314,6 @@ db.query(
                     if (err) return db.rollback(() =>
                       res.status(500).json({ error: "Помилка зарахування" })
                     );
-                    //  История отправителя
                     db.query(
                       `INSERT INTO transactions 
                        (user_id, card_id, type, transaction_type, amount, target_card_id, description)
@@ -351,7 +323,6 @@ db.query(
                         if (err) return db.rollback(() =>
                           res.status(500).json({ error: "Помилка історії" })
                         );
-                        // История получателя
                         db.query(
                           `INSERT INTO transactions 
                           (user_id, card_id, type, transaction_type, amount, target_card_id, description)
@@ -361,7 +332,6 @@ db.query(
                             if (err) return db.rollback(() =>
                               res.status(500).json({ error: err.message })
                             );
-                            //  Commit
                             db.commit(err => {
                               if (err) return db.rollback(() =>
                                 res.status(500).json({ error: "Commit error" })
@@ -396,7 +366,6 @@ app.post("/api/iban-transfer", authMiddleware, (req, res) => {
   db.beginTransaction(err => {
     if (err) return res.status(500).json({ error: "Transaction error" });
 
-    // 1. карта отправителя
     db.query(
       "SELECT * FROM cards WHERE user_id = ? FOR UPDATE",
       [userId],
@@ -420,7 +389,6 @@ if (fromCard.transfer_limit > 0 && sum > fromCard.transfer_limit) {
     res.status(400).json({ error: "Перевищено ліміт картки" })
   );
 }
-        // 2. карта получателя по IBAN
         db.query(
           "SELECT * FROM cards WHERE iban = ? FOR UPDATE",
           [iban],
@@ -433,14 +401,12 @@ if (fromCard.transfer_limit > 0 && sum > fromCard.transfer_limit) {
 
             const toCard = toCards[0];
 
-            // запрет самому себе
             if (fromCard.id === toCard.id) {
               return db.rollback(() =>
                 res.status(400).json({ error: "Неможливо переказати кошти самому собі" })
               );
             }
 
-            // проверка баланса
             if (Number(fromCard.balance) < sum) {
               return db.rollback(() =>
                 res.status(400).json({ error: "Недостатньо коштів" })
@@ -449,7 +415,6 @@ if (fromCard.transfer_limit > 0 && sum > fromCard.transfer_limit) {
 
             
 
-                // 4. зачисление
                 db.query(
                   "UPDATE cards SET balance = balance + ? WHERE id = ?",
                   [sum, toCard.id],
@@ -458,7 +423,6 @@ if (fromCard.transfer_limit > 0 && sum > fromCard.transfer_limit) {
                       res.status(500).json({ error: "Помилка зарахування" })
                     );
 
-                    // 5. история отправителя
                     db.query(
                       `INSERT INTO transactions
                        (user_id, card_id, type, transaction_type, amount, target_card_id, description, receiver_iban, receiver_name)
@@ -469,7 +433,6 @@ if (fromCard.transfer_limit > 0 && sum > fromCard.transfer_limit) {
                           res.status(500).json({ error: "Помилка історії" })
                         );
 
-                        // 6. история получателя
                         db.query(
                           `INSERT INTO transactions
                            (user_id, card_id, type, transaction_type, amount, target_card_id, description, receiver_iban, receiver_name)
@@ -503,7 +466,6 @@ if (fromCard.transfer_limit > 0 && sum > fromCard.transfer_limit) {
 
 
 
-/**API чтоб отображать историю карточек */
 app.get("/api/transfer/history", authMiddleware, (req, res) => {
   const userId = req.user.id;
 
@@ -558,7 +520,6 @@ app.post("/api/mobile", authMiddleware, (req, res) => {
           );
         }
 
-        // списание
         db.query(
           "UPDATE cards SET balance = balance - ? WHERE id = ?",
           [sum, card.id],
@@ -567,7 +528,6 @@ app.post("/api/mobile", authMiddleware, (req, res) => {
               res.status(500).json({ message: "Помилка списання" })
             );
 
-            // создаём транзакцию
             db.query(
               `INSERT INTO transactions 
                (user_id, card_id, type, transaction_type, amount, description)
@@ -580,7 +540,6 @@ app.post("/api/mobile", authMiddleware, (req, res) => {
 
                 const transactionId = result.insertId;
 
-                // mobile table
                 db.query(
                   `INSERT INTO mobile (transaction_id, user_id, card_id, phone_number, amount)
                    VALUES (?, ?, ?, ?, ?)`,
@@ -736,7 +695,6 @@ app.post("/api/templates", authMiddleware, (req, res) => {
     return res.status(400).json({ error: "Немає даних для шаблону" });
   }
 
-  // Проверка на дубликат
   db.query(
     `SELECT id FROM payment_templates 
      WHERE user_id = ? AND iban = ? AND receiver_name = ?`,
@@ -825,28 +783,24 @@ app.post("/api/internet-payment", authMiddleware, (req, res) => {
 
         const card = cards[0];
 
-        //  интернет-платежи
         if (card.internet_payment_enabled === 0) {
           return db.rollback(() =>
             res.status(403).json({ error: "Інтернет-платежі вимкнені" })
           );
         }
 
-        //  лимит
         if (card.transfer_limit > 0 && sum > card.transfer_limit) {
           return db.rollback(() =>
             res.status(400).json({ error: "Перевищено ліміт картки" })
           );
         }
 
-        //  баланс
         if (Number(card.balance) < sum) {
           return db.rollback(() =>
             res.status(400).json({ error: "Недостатньо коштів" })
           );
         }
 
-        // списываем
         db.query(
           "UPDATE cards SET balance = balance - ? WHERE id = ?",
           [sum, card.id],
@@ -855,7 +809,6 @@ app.post("/api/internet-payment", authMiddleware, (req, res) => {
               res.status(500).json({ error: "Помилка списання" })
             );
 
-            // пишем транзакцию
             db.query(
               `INSERT INTO transactions
                (user_id, card_id, type, transaction_type, amount, description)
@@ -889,7 +842,6 @@ app.post("/api/internet-payment", authMiddleware, (req, res) => {
 app.get("/api/analytics", authMiddleware, (req, res) => {
     const userId = req.user.id;
     
-    // Добавляем IS NOT NULL для transaction_type
     const query = `
         SELECT transaction_type, type, SUM(amount) as total 
         FROM transactions 
